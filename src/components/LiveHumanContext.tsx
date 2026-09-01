@@ -1,12 +1,10 @@
 import { useWorkspaceStore } from '../store/workspaceStore';
-import type { ItemStatus } from '../types/workspace';
-import { useTranslation } from '../i18n';
+import { useTranslation, type TranslationKey } from '../i18n';
 
-const STATUS_LABELS: Record<ItemStatus, string> = {
-  backlog: 'Backlog',
-  planned: 'Planned',
-  doing: 'Doing',
-  done: 'Done',
+const PRIORITY_LABEL_KEY: Record<string, TranslationKey> = {
+  low: 'priorityLow',
+  medium: 'priorityMedium',
+  high: 'priorityHigh',
 };
 
 function formatDate(dateStr?: string): string {
@@ -50,20 +48,20 @@ export default function LiveHumanContext() {
           <dl className="flex flex-col gap-1.5 text-xs">
             <div className="flex items-center justify-between">
               <dt className="text-text-tertiary">{t('status')}</dt>
-              <dd className="text-text-primary font-medium">{STATUS_LABELS[selected.status]}</dd>
+              <dd className="text-text-primary font-medium">{t(selected.status)}</dd>
             </div>
             <div className="flex items-center justify-between">
               <dt className="text-text-tertiary">{t('due')}</dt>
               <dd className="text-text-primary font-medium">{formatDate(selected.dueDate)}</dd>
             </div>
             <div className="flex items-center justify-between">
-              <dt className="text-text-tertiary">Owner</dt>
+              <dt className="text-text-tertiary">{t('owner')}</dt>
               <dd className="text-text-primary font-medium">{selected.owner || '—'}</dd>
             </div>
             <div className="flex items-center justify-between">
               <dt className="text-text-tertiary">{t('priority')}</dt>
-              <dd className={`font-medium capitalize ${selected.priority === 'high' ? 'text-rose-600' : selected.priority === 'low' ? 'text-slate-500' : 'text-amber-600'}`}>
-                {selected.priority || 'medium'}
+              <dd className={`font-medium ${selected.priority === 'high' ? 'text-rose-600' : selected.priority === 'low' ? 'text-slate-500' : 'text-amber-600'}`}>
+                {t(PRIORITY_LABEL_KEY[selected.priority || 'medium'])}
               </dd>
             </div>
             <div className="flex items-center justify-between">

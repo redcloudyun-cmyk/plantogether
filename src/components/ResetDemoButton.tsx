@@ -22,7 +22,7 @@ export default function ResetDemoButton({ variant = 'link' }: ResetDemoButtonPro
         <button
           onClick={() => setConfirmOpen(true)}
           className="text-xs text-text-tertiary hover:text-text-secondary transition-colors px-2 py-1 rounded hover:bg-surface-secondary"
-          title="Reset to demo data"
+          title={t('resetDemoTooltip')}
         >
           {t('resetDemo')}
         </button>

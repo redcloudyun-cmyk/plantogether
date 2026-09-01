@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useWorkspaceStore } from '../store/workspaceStore';
 import type { PlanItem, ItemStatus, ItemPriority } from '../types/workspace';
+import { useTranslation } from '../i18n';
 
 interface CardEditorProps {
   item?: PlanItem | null;
@@ -12,6 +13,7 @@ export default function CardEditor({ item, defaultStatus = 'backlog', onClose }:
   const addItem = useWorkspaceStore((s) => s.addItem);
   const updateItem = useWorkspaceStore((s) => s.updateItem);
   const addActivityLog = useWorkspaceStore((s) => s.addActivityLog);
+  const { t } = useTranslation();
 
   const [title, setTitle] = useState(item?.title || '');
   const [description, setDescription] = useState(item?.description || '');
@@ -61,8 +63,8 @@ export default function CardEditor({ item, defaultStatus = 'backlog', onClose }:
         }
         setError(
           result.reason === 'DEPENDENCIES_INCOMPLETE'
-            ? "Can't mark this Done — it still has incomplete dependencies."
-            : 'Could not save changes.'
+            ? t('dependenciesIncompleteError')
+            : t('couldNotSaveError')
         );
         return;
       }
@@ -103,32 +105,32 @@ export default function CardEditor({ item, defaultStatus = 'backlog', onClose }:
         onClick={(e) => e.stopPropagation()}
       >
         <h2 className="text-base font-semibold text-text-primary mb-4">
-          {item ? 'Edit Item' : 'New Item'}
+          {item ? t('editItem') : t('newItem')}
         </h2>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
           <div>
             <label className="block text-xs font-medium text-text-secondary mb-1">
-              Title *
+              {t('titleLabel')}
             </label>
             <input
               ref={titleRef}
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="What needs to be done?"
+              placeholder={t('titlePlaceholder')}
               className="w-full px-3 py-2 text-sm border border-border rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400 transition-all"
             />
           </div>
 
           <div>
             <label className="block text-xs font-medium text-text-secondary mb-1">
-              Description
+              {t('descriptionLabel')}
             </label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Add details..."
+              placeholder={t('descriptionPlaceholder')}
               rows={2}
               className="w-full px-3 py-2 text-sm border border-border rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400 transition-all resize-none"
             />
@@ -137,19 +139,19 @@ export default function CardEditor({ item, defaultStatus = 'backlog', onClose }:
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-medium text-text-secondary mb-1">
-                Owner
+                {t('ownerLabel')}
               </label>
               <input
                 type="text"
                 value={owner}
                 onChange={(e) => setOwner(e.target.value)}
-                placeholder="Assignee"
+                placeholder={t('ownerPlaceholder')}
                 className="w-full px-3 py-2 text-sm border border-border rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400 transition-all"
               />
             </div>
             <div>
               <label className="block text-xs font-medium text-text-secondary mb-1">
-                Due Date
+                {t('dueDateLabel')}
               </label>
               <input
                 type="date"
@@ -163,7 +165,7 @@ export default function CardEditor({ item, defaultStatus = 'backlog', onClose }:
           <div className="grid grid-cols-2 gap-3">
             <div>
             <label className="block text-xs font-medium text-text-secondary mb-1">
-              Status
+              {t('statusLabel')}
             </label>
             <select
               value={status}
@@ -173,24 +175,24 @@ export default function CardEditor({ item, defaultStatus = 'backlog', onClose }:
               }}
               className="w-full px-3 py-2 text-sm border border-border rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400 transition-all"
             >
-              <option value="backlog">Backlog</option>
-              <option value="planned">Planned</option>
-              <option value="doing">Doing</option>
-              <option value="done">Done</option>
+              <option value="backlog">{t('backlog')}</option>
+              <option value="planned">{t('planned')}</option>
+              <option value="doing">{t('doing')}</option>
+              <option value="done">{t('done')}</option>
             </select>
             </div>
             <div>
               <label className="block text-xs font-medium text-text-secondary mb-1">
-                Priority
+                {t('priorityLabel')}
               </label>
               <select
                 value={priority}
                 onChange={(e) => setPriority(e.target.value as ItemPriority)}
                 className="w-full px-3 py-2 text-sm border border-border rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400 transition-all"
               >
-                <option value="low">Low</option>
-                <option value="medium">Medium</option>
-                <option value="high">High</option>
+                <option value="low">{t('priorityLow')}</option>
+                <option value="medium">{t('priorityMedium')}</option>
+                <option value="high">{t('priorityHigh')}</option>
               </select>
             </div>
           </div>
@@ -207,14 +209,14 @@ export default function CardEditor({ item, defaultStatus = 'backlog', onClose }:
               onClick={onClose}
               className="px-4 py-2 text-sm text-text-secondary hover:text-text-primary transition-colors rounded-lg hover:bg-surface-secondary"
             >
-              Cancel
+              {t('cancel')}
             </button>
             <button
               type="submit"
               disabled={!title.trim()}
               className="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              {item ? 'Save Changes' : 'Add Item'}
+              {item ? t('saveChanges') : t('addItemBtn')}
             </button>
           </div>
         </form>

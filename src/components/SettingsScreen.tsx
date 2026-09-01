@@ -1,7 +1,7 @@
 import { useWorkspaceStore } from '../store/workspaceStore';
 import type { AutonomyMode } from '../types/workspace';
 import ResetDemoButton from './ResetDemoButton';
-import { useLanguageStore, useTranslation, type Language } from '../i18n';
+import { useLanguageStore, useTranslation, type Language, type TranslationKey } from '../i18n';
 
 const TOOLS = [
   { name: 'get_workspace_state', description: 'Read the full board — every item, status, owner, due date, lock, dependencies.' },
@@ -11,10 +11,10 @@ const TOOLS = [
   { name: 'analyze_plan', description: 'Read-only structured analysis of the plan, grouped by status and blockers.' },
 ];
 
-const AUTONOMY_MODES: { id: AutonomyMode; label: string; hint: string }[] = [
-  { id: 'observe', label: 'Observe', hint: 'Agent can read the workspace but cannot make any changes at all.' },
-  { id: 'assist', label: 'Assist (Recommended)', hint: 'Low-risk edits apply automatically. Due date, status, and dependency changes need your approval.' },
-  { id: 'autonomous', label: 'Autonomous', hint: 'Low & medium-risk edits apply automatically. Only high-risk changes (dependencies) need your approval.' },
+const AUTONOMY_MODES: { id: AutonomyMode; labelKey: TranslationKey; hint: string }[] = [
+  { id: 'observe', labelKey: 'observeMode', hint: 'Agent can read the workspace but cannot make any changes at all.' },
+  { id: 'assist', labelKey: 'assistMode', hint: 'Low-risk edits apply automatically. Due date, status, and dependency changes need your approval.' },
+  { id: 'autonomous', labelKey: 'autonomousMode', hint: 'Low & medium-risk edits apply automatically. Only high-risk changes (dependencies) need your approval.' },
 ];
 
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
@@ -43,13 +43,13 @@ export default function SettingsScreen() {
             <option value="en">{t('english')}</option>
             <option value="ko">{t('korean')}</option>
           </select>
-          <p className="text-xs text-text-tertiary mt-3">English is the default language for the hackathon demo.</p>
+          <p className="text-xs text-text-tertiary mt-3">{t('languageDefaultNote')}</p>
         </Card>
-        <Card title="WEBMCP STATUS">
+        <Card title={t('webmcpStatusTitle')}>
           <div className="flex items-center gap-2">
             <div className={`w-2.5 h-2.5 rounded-full ${webmcpAvailable ? 'bg-green-500' : 'bg-text-tertiary'}`} />
             <span className="text-sm font-medium text-text-primary">
-              {webmcpAvailable ? 'Connected' : 'Unavailable'}
+              {webmcpAvailable ? t('connected') : t('unavailable')}
             </span>
           </div>
           {!webmcpAvailable && (
@@ -59,7 +59,7 @@ export default function SettingsScreen() {
           )}
         </Card>
 
-        <Card title="TOOLS">
+        <Card title={t('toolsTitle')}>
           <div className="flex flex-col gap-2.5">
             {TOOLS.map((tool) => (
               <div key={tool.name} className="flex items-start gap-2 text-sm">
@@ -73,7 +73,7 @@ export default function SettingsScreen() {
           </div>
         </Card>
 
-        <Card title="AUTONOMY">
+        <Card title={t('autonomyTitle')}>
           <div className="flex flex-col gap-2">
             {AUTONOMY_MODES.map((mode) => (
               <button
@@ -91,7 +91,7 @@ export default function SettingsScreen() {
                       autonomyMode === mode.id ? 'border-primary-600 bg-primary-600' : 'border-border'
                     }`}
                   />
-                  <span className="text-sm font-medium text-text-primary">{mode.label}</span>
+                  <span className="text-sm font-medium text-text-primary">{t(mode.labelKey)}</span>
                 </div>
                 <p className="text-xs text-text-tertiary mt-1 ml-5">{mode.hint}</p>
               </button>
@@ -99,9 +99,9 @@ export default function SettingsScreen() {
           </div>
         </Card>
 
-        <Card title="CONTEXT">
+        <Card title={t('contextTitle')}>
           <div className="flex flex-col gap-1.5">
-            {['Current focus', 'Workspace state', 'Dependencies'].map((label) => (
+            {([t('contextCurrentFocus'), t('contextWorkspaceState'), t('dependencies')]).map((label) => (
               <div key={label} className="flex items-center gap-2 text-sm text-text-primary">
                 <span className="text-green-600">✓</span>
                 {label}
@@ -110,9 +110,9 @@ export default function SettingsScreen() {
           </div>
         </Card>
 
-        <Card title="RESTRICTED">
+        <Card title={t('restrictedTitle')}>
           <div className="flex flex-col gap-1.5">
-            {['Delete items or the workspace', 'Lock or unlock items (human-only)', 'Manage users'].map((label) => (
+            {([t('restrictedDeleteItems'), t('restrictedLockUnlock'), t('restrictedManageUsers')]).map((label) => (
               <div key={label} className="flex items-center gap-2 text-sm text-text-tertiary">
                 <span className="text-red-500">✗</span>
                 {label}
@@ -121,7 +121,7 @@ export default function SettingsScreen() {
           </div>
         </Card>
 
-        <Card title="DEMO">
+        <Card title={t('demoTitle')}>
           <ResetDemoButton variant="button" />
         </Card>
       </div>

@@ -1,9 +1,11 @@
 import { useWorkspaceStore } from '../store/workspaceStore';
+import { useTranslation } from '../i18n';
 
 export default function StatusBar() {
   const selectedItemId = useWorkspaceStore((s) => s.selectedItemId);
   const items = useWorkspaceStore((s) => s.items);
   const webmcpAvailable = useWorkspaceStore((s) => s.webmcpAvailable);
+  const { t } = useTranslation();
 
   const selectedItem = selectedItemId
     ? items.find((i) => i.id === selectedItemId)
@@ -12,14 +14,14 @@ export default function StatusBar() {
   return (
     <div className="flex items-center gap-4 px-4 py-2 text-xs border-t border-border bg-surface">
       <div className="flex items-center gap-2">
-        <span className="text-text-tertiary">Current focus:</span>
+        <span className="text-text-tertiary">{t('currentFocus')}</span>
         {selectedItem ? (
           <span className="font-medium text-text-primary">
             {selectedItem.title}
             {selectedItem.locked && ' 🔒'}
           </span>
         ) : (
-          <span className="text-text-tertiary italic">None selected</span>
+          <span className="text-text-tertiary italic">{t('noneSelected')}</span>
         )}
       </div>
 
@@ -32,9 +34,9 @@ export default function StatusBar() {
       )}
 
       <div className="flex items-center gap-3 text-text-tertiary">
-        <span>{items.length} items</span>
+        <span>{items.length} {t('itemsSuffix')}</span>
         <span>·</span>
-        <span>{items.filter((i) => i.status === 'done').length} done</span>
+        <span>{items.filter((i) => i.status === 'done').length} {t('doneSuffix')}</span>
       </div>
     </div>
   );

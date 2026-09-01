@@ -2,16 +2,16 @@ import { useMemo, useState } from 'react';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import type { Proposal, ProposalChangeSet, RiskLevel } from '../../types/workspace';
 import { calculateProposalImpact } from '../../lib/proposalImpact';
-import { useTranslation } from '../../i18n';
+import { useTranslation, type TranslationKey } from '../../i18n';
 
-const STATUS_LABELS: Record<string, string> = {
-  backlog: 'Backlog',
-  planned: 'Planned',
-  doing: 'Doing',
-  done: 'Done',
-  low: 'Low',
-  medium: 'Medium',
-  high: 'High',
+const VALUE_LABEL_KEY: Record<string, TranslationKey> = {
+  backlog: 'backlog',
+  planned: 'planned',
+  doing: 'doing',
+  done: 'done',
+  low: 'priorityLow',
+  medium: 'priorityMedium',
+  high: 'priorityHigh',
 };
 
 const RISK_STYLES: Record<RiskLevel, string> = {
@@ -20,25 +20,25 @@ const RISK_STYLES: Record<RiskLevel, string> = {
   high: 'bg-rose-100 text-rose-700',
 };
 
-const FIELD_LABELS: Record<keyof ProposalChangeSet, string> = {
-  title: 'Title',
-  description: 'Description',
-  status: 'Status',
-  owner: 'Owner',
-  dueDate: 'Due Date',
-  priority: 'Priority',
-  dependencies: 'Dependencies',
+const FIELD_LABEL_KEY: Record<keyof ProposalChangeSet, TranslationKey> = {
+  title: 'fieldTitle',
+  description: 'descriptionLabel',
+  status: 'statusLabel',
+  owner: 'ownerLabel',
+  dueDate: 'dueDateLabel',
+  priority: 'priorityLabel',
+  dependencies: 'dependencies',
 };
 
-function formatFieldValue(field: keyof ProposalChangeSet, value: unknown): string {
+function formatFieldValue(field: keyof ProposalChangeSet, value: unknown, t: (key: TranslationKey) => string): string {
   if (value === undefined || value === null || value === '') return '—';
   switch (field) {
     case 'status':
     case 'priority':
-      return STATUS_LABELS[value as string] || (value as string);
+      return VALUE_LABEL_KEY[value as string] ? t(VALUE_LABEL_KEY[value as string]) : (value as string);
     case 'dependencies': {
       const deps = value as string[];
-      return `${deps.length} item${deps.length === 1 ? '' : 's'}`;
+      return `${deps.length} ${t('itemsSuffix')}`;
     }
     default:
       return String(value);
@@ -140,13 +140,13 @@ export default function AgentProposalPanel() {
         <div>
           <p className="text-[10px] font-semibold tracking-wide text-text-tertiary">{t('currentPlan')}</p>
           <p className="mt-1 text-xl font-bold text-text-primary">{impact.current.score}<span className="text-xs font-normal text-text-tertiary"> / 100 {t('health')}</span></p>
-          <p className="text-xs text-text-secondary">{impact.currentConflictTotal} conflicts · {impact.current.blocked} blocked</p>
+          <p className="text-xs text-text-secondary">{impact.currentConflictTotal} {t('conflicts')} · {impact.current.blocked} {t('blocked')}</p>
         </div>
         <div className="self-center text-xl text-violet-500">→</div>
         <div>
           <p className="text-[10px] font-semibold tracking-wide text-violet-600">{t('proposedPlan')}</p>
           <p className="mt-1 text-xl font-bold text-violet-700">{impact.proposed.score}<span className="text-xs font-normal text-text-tertiary"> / 100 {t('health')}</span></p>
-          <p className="text-xs text-text-secondary">{impact.proposedConflictTotal} conflicts · {impact.proposed.blocked} blocked</p>
+          <p className="text-xs text-text-secondary">{impact.proposedConflictTotal} {t('conflicts')} · {impact.proposed.blocked} {t('blocked')}</p>
         </div>
       </div>
 
@@ -164,12 +164,12 @@ export default function AgentProposalPanel() {
             {rows.map(({ proposal, field }, i) => (
               <tr key={`${proposal.id}-${field}`} className={i < rows.length - 1 ? 'border-b border-border' : ''}>
                 <td className="px-3 py-2 font-medium text-text-primary whitespace-nowrap">{proposal.itemTitle}</td>
-                <td className="px-3 py-2 text-text-secondary">{FIELD_LABELS[field]}</td>
-                <td className="px-3 py-2 text-text-tertiary whitespace-nowrap">{formatFieldValue(field, proposal.before[field])}</td>
-                <td className="px-3 py-2 text-primary-700 font-medium whitespace-nowrap">{formatFieldValue(field, proposal.after[field])}</td>
+                <td className="px-3 py-2 text-text-secondary">{t(FIELD_LABEL_KEY[field])}</td>
+                <td className="px-3 py-2 text-text-tertiary whitespace-nowrap">{formatFieldValue(field, proposal.before[field], t)}</td>
+                <td className="px-3 py-2 text-primary-700 font-medium whitespace-nowrap">{formatFieldValue(field, proposal.after[field], t)}</td>
                 <td className="px-3 py-2">
                   <span className={`px-1.5 py-0.5 rounded font-medium uppercase text-[10px] ${RISK_STYLES[proposal.riskLevel]}`}>
-                    {proposal.riskLevel}
+                    {t(VALUE_LABEL_KEY[proposal.riskLevel])}
                   </span>
                 </td>
                 <td className="px-3 py-2 text-text-tertiary max-w-[220px]">{proposal.reason}</td>
@@ -187,7 +187,7 @@ export default function AgentProposalPanel() {
                             ? 'bg-green-100 text-green-700'
                             : 'text-text-tertiary hover:bg-surface-secondary'
                         }`}
-                        title="Accept"
+                        title={t('accept')}
                       >
                         ✓
                       </button>
@@ -198,7 +198,7 @@ export default function AgentProposalPanel() {
                             ? 'bg-red-100 text-red-700'
                             : 'text-text-tertiary hover:bg-surface-secondary'
                         }`}
-                        title="Reject"
+                        title={t('reject')}
                       >
                         ✗
                       </button>

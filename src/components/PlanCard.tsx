@@ -4,12 +4,19 @@ import type { PlanItem } from '../types/workspace';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { detectConflicts, computeCriticalPath } from '../lib/planAnalysis';
+import { useTranslation, type TranslationKey } from '../i18n';
 
-const CONFLICT_BADGE: Record<string, { icon: string; label: string }> = {
-  schedule_conflict: { icon: '⚠', label: 'Schedule Conflict' },
-  overdue: { icon: '⏰', label: 'Overdue' },
-  locked_critical: { icon: '🔒', label: 'Blocks Others' },
-  dependency_cycle: { icon: '⚠', label: 'Circular Dependency' },
+const CONFLICT_BADGE: Record<string, { icon: string; labelKey: TranslationKey }> = {
+  schedule_conflict: { icon: '⚠', labelKey: 'scheduleConflictBadge' },
+  overdue: { icon: '⏰', labelKey: 'overdueBadge' },
+  locked_critical: { icon: '🔒', labelKey: 'blocksOthersBadge' },
+  dependency_cycle: { icon: '⚠', labelKey: 'circularDependencyBadge' },
+};
+
+const PRIORITY_LABEL_KEY: Record<string, TranslationKey> = {
+  low: 'priorityLow',
+  medium: 'priorityMedium',
+  high: 'priorityHigh',
 };
 
 const PRIORITY_STYLES = {
@@ -24,6 +31,7 @@ interface PlanCardProps {
 }
 
 export default function PlanCard({ item, onEdit }: PlanCardProps) {
+  const { t } = useTranslation();
   const selectedItemId = useWorkspaceStore((s) => s.selectedItemId);
   const selectItem = useWorkspaceStore((s) => s.selectItem);
   const lockItem = useWorkspaceStore((s) => s.lockItem);
@@ -145,7 +153,7 @@ export default function PlanCard({ item, onEdit }: PlanCardProps) {
             : 'opacity-0 group-hover:opacity-40 hover:!opacity-100 text-text-tertiary hover:bg-surface-secondary'
           }
         `}
-        title={item.locked ? 'Locked by human — Agent cannot modify' : 'Click to lock'}
+        title={item.locked ? t('lockedByHumanTooltip') : t('clickToLock')}
       >
         {item.locked ? '🔒' : '🔓'}
       </button>
@@ -156,9 +164,9 @@ export default function PlanCard({ item, onEdit }: PlanCardProps) {
         {isCritical && (
           <span
             className="text-[9px] font-bold tracking-wide px-1.5 py-0.5 rounded bg-rose-50 text-rose-600"
-            title="On the critical path — slipping this pushes the whole plan out"
+            title={t('criticalPathTooltip')}
           >
-            CRITICAL
+            {t('criticalBadge')}
           </span>
         )}
       </h3>
@@ -166,7 +174,7 @@ export default function PlanCard({ item, onEdit }: PlanCardProps) {
       {/* Meta row */}
       <div className="mt-2 flex items-center gap-2 flex-wrap">
         <span className={`text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded ${PRIORITY_STYLES[item.priority || 'medium']}`}>
-          {item.priority || 'medium'}
+          {t(PRIORITY_LABEL_KEY[item.priority || 'medium'])}
         </span>
         {item.dueDate && (
           <span className="inline-flex items-center gap-1 text-xs text-text-secondary bg-surface-secondary px-1.5 py-0.5 rounded">
@@ -189,9 +197,9 @@ export default function PlanCard({ item, onEdit }: PlanCardProps) {
         {item.status !== 'done' && blockingItems.length > 0 && (
           <span
             className="inline-flex items-center gap-1 text-xs text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded"
-            title={`Blocked by: ${blockingItems.map((d) => d.title).join(', ')}`}
+            title={`${t('blockedByLabel')}: ${blockingItems.map((d) => d.title).join(', ')}`}
           >
-            ⛔ Blocked by {blockingItems.length}
+            ⛔ {t('blockedByLabel')} {blockingItems.length}
           </span>
         )}
 
@@ -201,7 +209,7 @@ export default function PlanCard({ item, onEdit }: PlanCardProps) {
             className="inline-flex items-center gap-1 text-xs text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded"
             title={c.detail}
           >
-            {CONFLICT_BADGE[c.type]?.icon ?? '⚠'} {CONFLICT_BADGE[c.type]?.label ?? c.title}
+            {CONFLICT_BADGE[c.type]?.icon ?? '⚠'} {CONFLICT_BADGE[c.type] ? t(CONFLICT_BADGE[c.type].labelKey) : c.title}
           </span>
         ))}
       </div>
@@ -216,9 +224,9 @@ export default function PlanCard({ item, onEdit }: PlanCardProps) {
           }`}
         >
           {item.updatedBy === 'agent' ? (
-            <>Agent ✦</>
+            <>{t('agentBadge')} ✦</>
           ) : (
-            <>Human</>
+            <>{t('human')}</>
           )}
         </span>
 
@@ -226,15 +234,15 @@ export default function PlanCard({ item, onEdit }: PlanCardProps) {
           <button
             onClick={handleRevert}
             className="text-[10px] text-text-tertiary hover:text-agent underline decoration-dotted transition-colors"
-            title="Revert to before the agent's last change"
+            title={t('revertTooltip')}
           >
-            ↩ Revert
+            ↩ {t('revertLabel')}
           </button>
         )}
 
         {item.locked && (
           <span className="text-[10px] text-amber-600 font-medium">
-            Locked
+            {t('locked')}
           </span>
         )}
       </div>

@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { computeCriticalPath, detectConflicts } from '../../lib/planAnalysis';
 import type { ItemStatus } from '../../types/workspace';
+import { useTranslation } from '../../i18n';
 
 const STATUS_STYLE: Record<ItemStatus, string> = {
   backlog: 'bg-surface-secondary border-border text-text-secondary',
@@ -14,6 +15,7 @@ export default function CriticalPathCard() {
   const items = useWorkspaceStore((s) => s.items);
   const selectedItemId = useWorkspaceStore((s) => s.selectedItemId);
   const selectItem = useWorkspaceStore((s) => s.selectItem);
+  const { t } = useTranslation();
 
   const pathIds = useMemo(() => Array.from(computeCriticalPath(items)).reverse(), [items]);
   const pathItems = useMemo(
@@ -29,15 +31,15 @@ export default function CriticalPathCard() {
   if (pathItems.length < 2) {
     return (
       <div className="bg-surface rounded-xl border border-border p-4 flex-1 min-w-0">
-        <h2 className="text-xs font-semibold text-text-secondary tracking-wide mb-3">CRITICAL PATH</h2>
-        <p className="text-xs text-text-tertiary">Not enough linked items yet to compute a critical path.</p>
+        <h2 className="text-xs font-semibold text-text-secondary tracking-wide mb-3">{t('criticalPath')}</h2>
+        <p className="text-xs text-text-tertiary">{t('notEnoughLinkedItems')}</p>
       </div>
     );
   }
 
   return (
     <div className="bg-surface rounded-xl border border-border p-4 flex-1 min-w-0">
-      <h2 className="text-xs font-semibold text-text-secondary tracking-wide mb-3">CRITICAL PATH</h2>
+      <h2 className="text-xs font-semibold text-text-secondary tracking-wide mb-3">{t('criticalPath')}</h2>
 
       <div className="flex items-center gap-1 overflow-x-auto pb-1">
         {pathItems.map((item, i) => (

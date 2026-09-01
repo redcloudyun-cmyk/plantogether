@@ -8,7 +8,33 @@ import SettingsScreen from './components/SettingsScreen';
 import { registerWebMCPTools } from './webmcp/registerTools';
 import { useWorkspaceStore } from './store/workspaceStore';
 import ResetDemoButton from './components/ResetDemoButton';
-import { useTranslation } from './i18n';
+import { useTranslation, useLanguageStore, type Language } from './i18n';
+
+function LanguageToggle() {
+  const language = useLanguageStore((state) => state.language);
+  const setLanguage = useLanguageStore((state) => state.setLanguage);
+  const options: { id: Language; label: string }[] = [
+    { id: 'en', label: 'EN' },
+    { id: 'ko', label: '한국어' },
+  ];
+
+  return (
+    <div className="flex items-center border border-border rounded-lg overflow-hidden text-xs font-medium flex-shrink-0">
+      {options.map((option) => (
+        <button
+          key={option.id}
+          onClick={() => setLanguage(option.id)}
+          aria-pressed={language === option.id}
+          className={`px-2.5 py-2 transition-colors ${
+            language === option.id ? 'bg-primary-600 text-white' : 'text-text-secondary hover:bg-surface-secondary'
+          }`}
+        >
+          {option.label}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 function TopBar({ screen }: { screen: ScreenId }) {
   const title = useWorkspaceStore((state) => state.title);
@@ -28,6 +54,7 @@ function TopBar({ screen }: { screen: ScreenId }) {
         </p>
       </div>
       <div className="flex items-center gap-3">
+        <LanguageToggle />
         <span className="hidden lg:flex items-center gap-2 border border-border rounded-lg px-3 py-2 text-xs font-medium">
           <span className={`w-2 h-2 rounded-full ${webmcpAvailable ? 'bg-emerald-500' : 'bg-slate-400'}`} />
           WebMCP <span className={webmcpAvailable ? 'text-emerald-600' : 'text-text-tertiary'}>{webmcpAvailable ? t('connected') : t('unavailable')}</span>

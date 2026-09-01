@@ -130,7 +130,6 @@ export default function Board() {
               <Column
                 key={col.id}
                 id={col.id}
-                title={col.title}
                 items={columnItems[col.id]}
                 onEditCard={handleEditCard}
                 onAddCard={handleAddCard}

@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { computePlanHealth, detectConflicts } from '../../lib/planAnalysis';
+import { useTranslation } from '../../i18n';
 
 const HEALTH_COLOR = (score: number) => (score >= 80 ? '#16a34a' : score >= 50 ? '#d97706' : '#dc2626');
-const HEALTH_LABEL = (score: number) => (score >= 80 ? 'Good' : score >= 50 ? 'Fair' : 'Poor');
 
 const CONFLICT_ICON: Record<string, string> = {
   schedule_conflict: '⚠',
@@ -47,40 +47,42 @@ function Gauge({ score }: { score: number }) {
 export default function PlanAnalysisCard() {
   const items = useWorkspaceStore((s) => s.items);
   const [showDetails, setShowDetails] = useState(false);
+  const { t } = useTranslation();
 
   const health = useMemo(() => computePlanHealth(items), [items]);
   const conflicts = useMemo(() => detectConflicts(items), [items]);
+  const healthLabel = health.score >= 80 ? t('healthGood') : health.score >= 50 ? t('healthFair') : t('healthPoor');
 
   return (
     <div className="bg-surface rounded-xl border border-border p-4 flex-1 min-w-0">
-      <h2 className="text-xs font-semibold text-text-secondary tracking-wide mb-3">PLAN ANALYSIS</h2>
+      <h2 className="text-xs font-semibold text-text-secondary tracking-wide mb-3">{t('planAnalysisTitle')}</h2>
 
       <div className="flex items-start gap-5">
         <div className="flex flex-col items-center gap-1 flex-shrink-0">
           <Gauge score={health.score} />
           <span className="text-xs font-medium" style={{ color: HEALTH_COLOR(health.score) }}>
-            {HEALTH_LABEL(health.score)}
+            {healthLabel}
           </span>
         </div>
 
         <div className="flex-1 min-w-0">
-          <p className="text-[10px] text-text-tertiary uppercase tracking-wide mb-2">Detected Issues</p>
+          <p className="text-[10px] text-text-tertiary uppercase tracking-wide mb-2">{t('detectedIssues')}</p>
           <div className="flex flex-col gap-1.5 text-xs">
             <div className="flex items-center gap-2">
               <span>⚠</span>
-              <span className="text-text-primary">{health.conflicts} Conflict{health.conflicts === 1 ? '' : 's'} Detected</span>
+              <span className="text-text-primary">{health.conflicts} {t('conflictsDetectedLabel')}</span>
             </div>
             <div className="flex items-center gap-2">
               <span>⏰</span>
-              <span className="text-text-primary">{health.overdue} Overdue Task{health.overdue === 1 ? '' : 's'}</span>
+              <span className="text-text-primary">{health.overdue} {t('overdueTasksLabel')}</span>
             </div>
             <div className="flex items-center gap-2">
               <span>⛔</span>
-              <span className="text-text-primary">{health.blocked} Blocked Item{health.blocked === 1 ? '' : 's'}</span>
+              <span className="text-text-primary">{health.blocked} {t('blockedItemsLabel')}</span>
             </div>
             <div className="flex items-center gap-2">
               <span>🔒</span>
-              <span className="text-text-primary">{health.protected} Protected Item{health.protected === 1 ? '' : 's'}</span>
+              <span className="text-text-primary">{health.protected} {t('protectedItemsLabel')}</span>
             </div>
           </div>
 
@@ -88,7 +90,7 @@ export default function PlanAnalysisCard() {
             onClick={() => setShowDetails((v) => !v)}
             className="mt-3 text-xs font-medium text-primary-600 hover:text-primary-700 border border-primary-200 hover:bg-primary-50 rounded-lg px-3 py-1.5 transition-colors"
           >
-            {showDetails ? 'Hide Details' : 'View Details'}
+            {showDetails ? t('hideDetails') : t('viewDetails')}
           </button>
         </div>
       </div>
@@ -96,7 +98,7 @@ export default function PlanAnalysisCard() {
       {showDetails && (
         <div className="mt-4 pt-4 border-t border-border flex flex-col gap-2">
           {conflicts.length === 0 ? (
-            <p className="text-xs text-text-tertiary">No conflicts detected — the plan is clean.</p>
+            <p className="text-xs text-text-tertiary">{t('noConflictsClean')}</p>
           ) : (
             conflicts.map((c) => (
               <div key={c.id} className="flex items-start gap-2 text-xs border-l-2 border-amber-300 pl-3 py-0.5">

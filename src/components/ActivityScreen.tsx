@@ -32,10 +32,10 @@ function formatTimestamp(iso: string): string {
   return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 }
 
-const SOURCE_LABEL: Record<ActivityLogEntry['source'], string> = {
-  human: 'Human',
-  webmcp: 'Agent (WebMCP)',
-  system: 'System',
+const SOURCE_LABEL_KEY: Record<ActivityLogEntry['source'], TranslationKey> = {
+  human: 'human',
+  webmcp: 'sourceAgentWebmcp',
+  system: 'sourceSystem',
 };
 
 function ActivityRow({ entry }: { entry: ActivityLogEntry }) {
@@ -67,7 +67,7 @@ function ActivityRow({ entry }: { entry: ActivityLogEntry }) {
         <div className="px-4 pb-3 pl-10 flex flex-col gap-1.5 text-xs">
           <div className="grid grid-cols-[80px_1fr] gap-x-2">
             <span className="text-text-tertiary">{t('actor')}</span>
-            <span className="text-text-primary">{SOURCE_LABEL[entry.source]}</span>
+            <span className="text-text-primary">{t(SOURCE_LABEL_KEY[entry.source])}</span>
           </div>
           {entry.toolName && (
             <div className="grid grid-cols-[80px_1fr] gap-x-2">
@@ -126,12 +126,12 @@ export default function ActivityScreen() {
     <div className="flex-1 overflow-y-auto p-6">
       <div className="max-w-7xl mx-auto flex flex-col gap-4">
         <div className="bg-surface rounded-xl border border-border py-3 flex items-center justify-around flex-wrap gap-y-2">
-          <StatBox label="Human" value={summary.humanActions} />
-          <StatBox label="Agent" value={summary.agentActions} />
-          <StatBox label="Proposals" value={summary.proposals} />
-          <StatBox label="Approved" value={summary.approved} />
-          <StatBox label="Rejected" value={summary.rejected} />
-          <StatBox label="Reverted" value={summary.reverted} />
+          <StatBox label={t('human')} value={summary.humanActions} />
+          <StatBox label={t('agentActionsFilter')} value={summary.agentActions} />
+          <StatBox label={t('proposalsFilter')} value={summary.proposals} />
+          <StatBox label={t('approved')} value={summary.approved} />
+          <StatBox label={t('rejected')} value={summary.rejected} />
+          <StatBox label={t('reverted')} value={summary.reverted} />
         </div>
 
         <div className="flex items-center gap-1 bg-surface-secondary rounded-full border border-border p-0.5 w-fit">

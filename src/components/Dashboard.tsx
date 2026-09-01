@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useWorkspaceStore } from '../store/workspaceStore';
 import { computePlanHealth, detectConflicts, computeCriticalPath } from '../lib/planAnalysis';
 import AgentMissionCard from './workspace/AgentMissionCard';
-import { useTranslation } from '../i18n';
+import { useTranslation, type TranslationKey } from '../i18n';
 
 const CONFLICT_ICONS: Record<string, string> = {
   schedule_conflict: '⚠',
@@ -12,10 +12,10 @@ const CONFLICT_ICONS: Record<string, string> = {
   dependency_cycle: '⚠',
 };
 
-const AUTONOMY_LABELS: Record<string, string> = {
-  observe: 'Observe Mode',
-  assist: 'Assist Mode',
-  autonomous: 'Autonomous Mode',
+const AUTONOMY_LABEL_KEY: Record<string, TranslationKey> = {
+  observe: 'observeMode',
+  assist: 'assistMode',
+  autonomous: 'autonomousMode',
 };
 
 function StatRow({ label, value, emphasis }: { label: string; value: number; emphasis?: 'agent' | 'human' }) {
@@ -81,7 +81,7 @@ export default function Dashboard({ onOpenWorkspace }: { onOpenWorkspace: () => 
             <StatRow label={t('reverted')} value={reverted} />
             {pending > 0 && (
               <p className="mt-2 text-xs text-agent bg-agent-light rounded-lg px-2 py-1.5">
-                {pending} proposal{pending === 1 ? '' : 's'} still awaiting approval
+                {pending} {t('proposals')} {t('stillAwaitingApproval')}
               </p>
             )}
           </div>
@@ -96,30 +96,30 @@ export default function Dashboard({ onOpenWorkspace }: { onOpenWorkspace: () => 
             <div className="flex flex-col gap-1.5 text-xs">
               <div className="flex items-center gap-1.5 text-text-secondary">
                 <span>⚠</span>
-                <span>{health.conflicts} conflict{health.conflicts === 1 ? '' : 's'}</span>
+                <span>{health.conflicts} {t('conflicts')}</span>
               </div>
               <div className="flex items-center gap-1.5 text-text-secondary">
                 <span>⛔</span>
-                <span>{health.blocked} blocked</span>
+                <span>{health.blocked} {t('blocked')}</span>
               </div>
               <div className="flex items-center gap-1.5 text-text-secondary">
                 <span>🔒</span>
-                <span>{health.protected} protected</span>
+                <span>{health.protected} {t('protectedLabel')}</span>
               </div>
             </div>
           </div>
 
           {/* Agent status */}
           <div className="bg-surface rounded-xl border border-border p-4">
-            <h2 className="text-xs font-semibold text-text-secondary tracking-wide mb-2">AGENT</h2>
+            <h2 className="text-xs font-semibold text-text-secondary tracking-wide mb-2">{t('agent')}</h2>
             <div className="flex items-center gap-2 mb-2">
               <div className={`w-2 h-2 rounded-full ${webmcpAvailable ? 'bg-green-500' : 'bg-text-tertiary'}`} />
               <span className="text-sm text-text-primary font-medium">
-                {webmcpAvailable ? 'WebMCP Connected' : 'WebMCP Unavailable'}
+                {t('webmcp')} {webmcpAvailable ? t('connected') : t('unavailable')}
               </span>
             </div>
-            <p className="text-sm text-text-secondary mb-1">{AUTONOMY_LABELS[autonomyMode]}</p>
-            <p className="text-xs text-text-tertiary mb-3">5 Tools Available</p>
+            <p className="text-sm text-text-secondary mb-1">{t(AUTONOMY_LABEL_KEY[autonomyMode])}</p>
+            <p className="text-xs text-text-tertiary mb-3">5 {t('toolsAvailable')}</p>
             <button
               onClick={onOpenWorkspace}
               className="w-full px-3 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors"
@@ -132,10 +132,10 @@ export default function Dashboard({ onOpenWorkspace }: { onOpenWorkspace: () => 
         {/* Conflicts detail */}
         <div className="bg-surface rounded-xl border border-border p-4">
           <h2 className="text-xs font-semibold text-text-secondary tracking-wide mb-3">
-            CONFLICTS {conflicts.length > 0 && `(${conflicts.length})`}
+            {t('conflictsSectionTitle')} {conflicts.length > 0 && `(${conflicts.length})`}
           </h2>
           {conflicts.length === 0 ? (
-            <p className="text-sm text-text-tertiary">No conflicts detected — the plan is clean.</p>
+            <p className="text-sm text-text-tertiary">{t('noConflictsClean')}</p>
           ) : (
             <div className="flex flex-col gap-2">
               {conflicts.map((c) => (

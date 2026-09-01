@@ -1,5 +1,5 @@
 import { useWorkspaceStore } from '../store/workspaceStore';
-import withgexLogo from '../assets/withgex-logo.png';
+import withgexLogo from '../assets/withgex-logo-white.png';
 import { useTranslation, type TranslationKey } from '../i18n';
 
 export type ScreenId = 'dashboard' | 'workspace' | 'activity' | 'settings';
