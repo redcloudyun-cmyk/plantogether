@@ -11,6 +11,7 @@ interface CardEditorProps {
 export default function CardEditor({ item, defaultStatus = 'backlog', onClose }: CardEditorProps) {
   const addItem = useWorkspaceStore((s) => s.addItem);
   const updateItem = useWorkspaceStore((s) => s.updateItem);
+  const addActivityLog = useWorkspaceStore((s) => s.addActivityLog);
 
   const [title, setTitle] = useState(item?.title || '');
   const [description, setDescription] = useState(item?.description || '');
@@ -48,6 +49,14 @@ export default function CardEditor({ item, defaultStatus = 'backlog', onClose }:
       }, 'human');
 
       if (!result.success) {
+        if (result.reason === 'DEPENDENCIES_INCOMPLETE') {
+          addActivityLog({
+            source: 'human',
+            action: 'Blocked',
+            detail: `"${item.title}"\nDEPENDENCIES_INCOMPLETE`,
+            status: 'blocked',
+          });
+        }
         setError(
           result.reason === 'DEPENDENCIES_INCOMPLETE'
             ? "Can't mark this Done — it still has incomplete dependencies."
@@ -55,6 +64,13 @@ export default function CardEditor({ item, defaultStatus = 'backlog', onClose }:
         );
         return;
       }
+
+      addActivityLog({
+        source: 'human',
+        action: 'Updated',
+        detail: `"${title.trim()}"`,
+        status: 'success',
+      });
     } else {
       addItem({
         title: title.trim(),
@@ -63,6 +79,13 @@ export default function CardEditor({ item, defaultStatus = 'backlog', onClose }:
         dueDate: dueDate || undefined,
         status,
       }, 'human');
+
+      addActivityLog({
+        source: 'human',
+        action: 'Added',
+        detail: `"${title.trim()}"`,
+        status: 'success',
+      });
     }
     onClose();
   };

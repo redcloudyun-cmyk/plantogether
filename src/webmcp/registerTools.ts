@@ -1,5 +1,6 @@
 import { useWorkspaceStore } from '../store/workspaceStore';
-import type { ActivityStatus } from '../types/workspace';
+import type { ActivityStatus, ProposalChangeSet } from '../types/workspace';
+import { classifyRisk, decideAutonomyAction } from '../lib/risk';
 
 // Type declaration for the WebMCP API
 declare global {
@@ -35,6 +36,7 @@ const REASON_MESSAGES: Record<string, string> = {
   INVALID_STATUS: 'Status must be one of: backlog, planned, doing, done.',
   INVALID_DATE_FORMAT: 'Date must be in YYYY-MM-DD format.',
   DEPENDENCIES_INCOMPLETE: 'This item cannot be marked Done until its dependencies are Done.',
+  AUTONOMY_OBSERVE_MODE: 'The agent is currently in Observe mode. Mutations are disabled until a human switches to Assist or Autonomous mode.',
 };
 
 export async function registerWebMCPTools(): Promise<() => void> {
@@ -151,18 +153,23 @@ export async function registerWebMCPTools(): Promise<() => void> {
               items: { type: 'string' },
               description: 'Array of item IDs this item depends on',
             },
+            reason: {
+              type: 'string',
+              description: 'Optional: briefly explain why you are adding this item. Shown to the human in the activity log.',
+            },
           },
           required: ['title'],
           additionalProperties: false,
         },
         execute: async (args) => {
-          const { title, description, status, owner, dueDate, dependencies } = args as {
+          const { title, description, status, owner, dueDate, dependencies, reason } = args as {
             title: string;
             description?: string;
             status?: string;
             owner?: string;
             dueDate?: string;
             dependencies?: string[];
+            reason?: string;
           };
 
           log('add_item', { title, status, owner, dueDate });
@@ -183,6 +190,12 @@ export async function registerWebMCPTools(): Promise<() => void> {
             return { success: false, reason: 'INVALID_DATE_FORMAT', message: REASON_MESSAGES.INVALID_DATE_FORMAT };
           }
 
+          // Create Item is always LOW risk (§20), but Observe mode allows no mutation at all.
+          if (store.getState().autonomyMode === 'observe') {
+            logActivity('add_item', 'AUTONOMY_OBSERVE_MODE', 'blocked');
+            return { success: false, reason: 'AUTONOMY_OBSERVE_MODE', message: REASON_MESSAGES.AUTONOMY_OBSERVE_MODE };
+          }
+
           const newItem = store.getState().addItem(
             {
               title: title.trim(),
@@ -195,7 +208,7 @@ export async function registerWebMCPTools(): Promise<() => void> {
             'agent'
           );
 
-          logActivity('add_item', newItem.title);
+          logActivity('add_item', reason ? `${newItem.title}\n${reason}` : newItem.title);
 
           return {
             success: true,
@@ -214,7 +227,7 @@ export async function registerWebMCPTools(): Promise<() => void> {
         name: 'update_item',
         title: 'Update Planning Item',
         description:
-          'Updates an existing planning item. You can change the title, description, status, owner, due date, or dependencies. Changes appear immediately on the board. Cannot modify items that are locked by the human user — locking is a human-only action, so a locked item stays locked until the human unlocks it.',
+          'Updates an existing planning item. You can change the title, description, status, owner, due date, or dependencies. Low-risk edits (title/description/owner) apply immediately. Due date, status, or dependency changes are medium/high risk: depending on the current autonomy mode, they may instead create a Proposal that a human must approve before it takes effect (the response will have proposed: true and no board change will be visible yet). Cannot modify items that are locked by the human user — that always takes priority over autonomy mode, so a locked item stays locked until the human unlocks it.',
         inputSchema: {
           type: 'object',
           properties: {
@@ -248,12 +261,17 @@ export async function registerWebMCPTools(): Promise<() => void> {
               items: { type: 'string' },
               description: 'New dependency list',
             },
+            reason: {
+              type: 'string',
+              description:
+                'Why you are making this change. Important for due date, status, or dependency changes — those are shown to the human for approval along with this explanation, so a clear, specific reason (e.g. "Record Demo was delayed, shifting this by one day to avoid a conflict") matters.',
+            },
           },
           required: ['itemId'],
           additionalProperties: false,
         },
         execute: async (args) => {
-          const { itemId, ...changes } = args as {
+          const { itemId, reason, ...changes } = args as {
             itemId: string;
             title?: string;
             description?: string;
@@ -261,13 +279,20 @@ export async function registerWebMCPTools(): Promise<() => void> {
             owner?: string;
             dueDate?: string;
             dependencies?: string[];
+            reason?: string;
           };
 
-          log('update_item', { itemId, changes });
+          log('update_item', { itemId, changes, reason });
 
           if (!itemId) {
             logActivity('update_item', 'ITEM_ID_REQUIRED', 'error');
             return { success: false, reason: 'ITEM_ID_REQUIRED', message: REASON_MESSAGES.ITEM_ID_REQUIRED };
+          }
+
+          const item = store.getState().items.find((i) => i.id === itemId);
+          if (!item) {
+            logActivity('update_item', 'ITEM_NOT_FOUND', 'error');
+            return { success: false, reason: 'ITEM_NOT_FOUND', message: REASON_MESSAGES.ITEM_NOT_FOUND };
           }
 
           if (changes.dueDate && !/^\d{4}-\d{2}-\d{2}$/.test(changes.dueDate)) {
@@ -275,31 +300,84 @@ export async function registerWebMCPTools(): Promise<() => void> {
             return { success: false, reason: 'INVALID_DATE_FORMAT', message: REASON_MESSAGES.INVALID_DATE_FORMAT };
           }
 
+          // Human locks always take priority over autonomy mode (§23) — checked before
+          // risk classification so a locked item never gets a proposal either.
+          if (item.locked) {
+            logActivity('update_item', `${item.title}\nITEM_LOCKED_BY_HUMAN`, 'blocked');
+            return { success: false, reason: 'ITEM_LOCKED_BY_HUMAN', message: REASON_MESSAGES.ITEM_LOCKED_BY_HUMAN };
+          }
+
           const typedChanges = {
             ...changes,
             status: changes.status as 'backlog' | 'planned' | 'doing' | 'done' | undefined,
           };
-          const result = store.getState().updateItem(itemId, typedChanges, 'agent');
-          const item = store.getState().items.find((i) => i.id === itemId);
 
-          if (result.success) {
-            const changeDesc = Object.keys(changes).join(', ');
-            logActivity('update_item', `${result.item?.title} (${changeDesc})`);
-            return result;
+          // Dependency completeness is validated up front regardless of risk/autonomy,
+          // so we never propose (or auto-apply) a change that can't actually be applied.
+          if (typedChanges.status === 'done') {
+            const effectiveDeps = typedChanges.dependencies ?? item.dependencies;
+            const stillIncomplete = effectiveDeps
+              .map((depId) => store.getState().items.find((i) => i.id === depId))
+              .filter((dep) => dep && dep.status !== 'done');
+            if (stillIncomplete.length > 0) {
+              const blockers = store.getState().getIncompleteDependencies(itemId);
+              logActivity('update_item', `${item.title}\nDEPENDENCIES_INCOMPLETE`, 'blocked');
+              return {
+                success: false,
+                reason: 'DEPENDENCIES_INCOMPLETE',
+                message: `Cannot mark this item Done: it still depends on ${blockers.length} incomplete item(s): ${blockers.map((b) => b.title).join(', ')}.`,
+              };
+            }
           }
 
-          if (result.reason === 'DEPENDENCIES_INCOMPLETE') {
-            const blockers = store.getState().getIncompleteDependencies(itemId);
-            logActivity('update_item', `${item?.title}\nDEPENDENCIES_INCOMPLETE`, 'blocked');
+          if (store.getState().autonomyMode === 'observe') {
+            logActivity('update_item', 'AUTONOMY_OBSERVE_MODE', 'blocked');
+            return { success: false, reason: 'AUTONOMY_OBSERVE_MODE', message: REASON_MESSAGES.AUTONOMY_OBSERVE_MODE };
+          }
+
+          const changeSet: ProposalChangeSet = typedChanges;
+          const risk = classifyRisk(changeSet);
+          const action = decideAutonomyAction(store.getState().autonomyMode, risk);
+
+          if (action === 'propose') {
+            const before: ProposalChangeSet = {};
+            (Object.keys(changeSet) as (keyof ProposalChangeSet)[]).forEach((field) => {
+              // @ts-expect-error — narrowing per-field assignment between two structurally matching partials
+              before[field] = item[field];
+            });
+
+            const proposalReason = reason?.trim()
+              ? reason.trim()
+              : 'No reason was provided by the agent for this change.';
+
+            const proposal = store.getState().createProposal({
+              itemId,
+              itemTitle: item.title,
+              riskLevel: risk,
+              before,
+              after: changeSet,
+              reason: proposalReason,
+              tool: 'update_item',
+            });
+
             return {
-              ...result,
-              message: `Cannot mark this item Done: it still depends on ${blockers.length} incomplete item(s): ${blockers.map((b) => b.title).join(', ')}.`,
+              success: true,
+              proposed: true,
+              proposalId: proposal.id,
+              riskLevel: risk,
+              message: `This is a ${risk.toUpperCase()}-risk change, so it was not applied automatically. A proposal (${proposal.id}) has been created and is waiting for the human to approve or reject it in the Workspace UI.`,
             };
           }
 
-          if (result.reason === 'ITEM_LOCKED_BY_HUMAN') {
-            logActivity('update_item', `${item?.title}\nITEM_LOCKED_BY_HUMAN`, 'blocked');
-            return { ...result, message: REASON_MESSAGES.ITEM_LOCKED_BY_HUMAN };
+          const result = store.getState().updateItem(itemId, typedChanges, 'agent');
+
+          if (result.success) {
+            const changeDesc = Object.keys(changes).join(', ');
+            logActivity(
+              'update_item',
+              reason ? `${result.item?.title} (${changeDesc})\n${reason}` : `${result.item?.title} (${changeDesc})`
+            );
+            return result;
           }
 
           logActivity('update_item', String(result.reason ?? 'UNKNOWN_ERROR'), 'error');
@@ -371,9 +449,10 @@ export async function registerWebMCPTools(): Promise<() => void> {
                 blockedBy: store.getState().getIncompleteDependencies(i.id).map((b) => b.title),
                 note: 'Cannot be marked Done until its dependencies are Done.',
               })),
+            autonomyMode: store.getState().autonomyMode,
             constraints: constraints || 'none specified',
             instructions:
-              'Review the items above. Respect all locked items. Use update_item to adjust dates, statuses, and dependencies for unlocked items as needed to create a balanced plan.',
+              'Review the items above. Respect all locked items. Use update_item to adjust dates, statuses, and dependencies for unlocked items as needed to create a balanced plan. Title/description/owner edits apply immediately; due date, status, or dependency changes may instead create a proposal awaiting human approval, depending on the current autonomy mode — always pass a clear "reason" explaining why.',
           };
 
           logActivity('analyze_plan', `${state.items.length} items, ${lockedItems.length} locked`);

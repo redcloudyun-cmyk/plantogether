@@ -3,6 +3,14 @@ import { useWorkspaceStore } from '../store/workspaceStore';
 import type { PlanItem } from '../types/workspace';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { detectConflicts, computeCriticalPath } from '../lib/planAnalysis';
+
+const CONFLICT_BADGE: Record<string, { icon: string; label: string }> = {
+  schedule_conflict: { icon: '⚠', label: 'Schedule Conflict' },
+  overdue: { icon: '⏰', label: 'Overdue' },
+  locked_critical: { icon: '🔒', label: 'Blocks Others' },
+  dependency_cycle: { icon: '⚠', label: 'Circular Dependency' },
+};
 
 interface PlanCardProps {
   item: PlanItem;
@@ -15,6 +23,7 @@ export default function PlanCard({ item, onEdit }: PlanCardProps) {
   const lockItem = useWorkspaceStore((s) => s.lockItem);
   const unlockItem = useWorkspaceStore((s) => s.unlockItem);
   const revertItem = useWorkspaceStore((s) => s.revertItem);
+  const addActivityLog = useWorkspaceStore((s) => s.addActivityLog);
   const allItems = useWorkspaceStore((s) => s.items);
 
   const isSelected = selectedItemId === item.id;
@@ -25,6 +34,16 @@ export default function PlanCard({ item, onEdit }: PlanCardProps) {
         .filter((dep): dep is PlanItem => !!dep && dep.status !== 'done'),
     [item.dependencies, allItems]
   );
+  const otherConflicts = useMemo(() => {
+    const conflicts = detectConflicts(allItems).filter(
+      (c) => c.itemIds.includes(item.id) && c.type !== 'blocked_dependency'
+    );
+    // De-dupe by type so a card shows at most one badge per conflict kind.
+    const seen = new Set<string>();
+    return conflicts.filter((c) => (seen.has(c.type) ? false : (seen.add(c.type), true)));
+  }, [allItems, item.id]);
+  const isCritical = useMemo(() => computeCriticalPath(allItems).has(item.id), [allItems, item.id]);
+
   const [showHighlight, setShowHighlight] = useState(false);
   const prevUpdatedAtRef = useRef(item.updatedAt);
 
@@ -65,8 +84,10 @@ export default function PlanCard({ item, onEdit }: PlanCardProps) {
     e.stopPropagation();
     if (item.locked) {
       unlockItem(item.id);
+      addActivityLog({ source: 'human', action: 'Unlocked', detail: `"${item.title}"`, status: 'success' });
     } else {
       lockItem(item.id);
+      addActivityLog({ source: 'human', action: 'Locked', detail: `"${item.title}"`, status: 'success' });
     }
   };
 
@@ -124,8 +145,16 @@ export default function PlanCard({ item, onEdit }: PlanCardProps) {
       </button>
 
       {/* Title */}
-      <h3 className="text-sm font-medium text-text-primary pr-7 leading-snug">
+      <h3 className="text-sm font-medium text-text-primary pr-7 leading-snug flex items-center gap-1.5 flex-wrap">
         {item.title}
+        {isCritical && (
+          <span
+            className="text-[9px] font-bold tracking-wide px-1.5 py-0.5 rounded bg-rose-50 text-rose-600"
+            title="On the critical path — slipping this pushes the whole plan out"
+          >
+            CRITICAL
+          </span>
+        )}
       </h3>
 
       {/* Meta row */}
@@ -156,6 +185,16 @@ export default function PlanCard({ item, onEdit }: PlanCardProps) {
             ⛔ Blocked by {blockingItems.length}
           </span>
         )}
+
+        {otherConflicts.map((c) => (
+          <span
+            key={c.type}
+            className="inline-flex items-center gap-1 text-xs text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded"
+            title={c.detail}
+          >
+            {CONFLICT_BADGE[c.type]?.icon ?? '⚠'} {CONFLICT_BADGE[c.type]?.label ?? c.title}
+          </span>
+        ))}
       </div>
 
       {/* Actor badge */}
