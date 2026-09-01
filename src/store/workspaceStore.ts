@@ -13,6 +13,7 @@ import type {
   ContextScopeKey,
 } from '../types/workspace';
 import { demoWorkspace } from '../data/demoWorkspace';
+import { computePlanHealth, type PlanHealth } from '../lib/planAnalysis';
 
 let idCounter = 100;
 function generateId(): string {
@@ -68,6 +69,15 @@ function getIncompleteDependencies(item: PlanItem, allItems: PlanItem[]): PlanIt
     .filter((dep): dep is PlanItem => !!dep && dep.status !== 'done');
 }
 
+/** Redacts the fields the human has excluded from the agent's Context Scope. */
+export function applyContextScopeToItem(item: PlanItem, scope: Record<ContextScopeKey, boolean>): PlanItem {
+  return {
+    ...item,
+    dependencies: scope.dependencies ? item.dependencies : [],
+    owner: scope.teamInformation ? item.owner : undefined,
+  };
+}
+
 interface WorkspaceState {
   // Workspace data
   id: string;
@@ -95,7 +105,16 @@ interface WorkspaceState {
   lockItem: (id: string) => { success: boolean; reason?: string };
   unlockItem: (id: string) => { success: boolean; reason?: string };
   revertItem: (id: string) => { success: boolean; reason?: string };
-  getWorkspace: () => { id: string; title: string; items: PlanItem[]; selectedItemId: string | null; updatedAt: string };
+  getWorkspace: () => {
+    id: string;
+    title: string;
+    items: PlanItem[];
+    selectedItemId: string | null;
+    updatedAt: string;
+    recentActivity?: ActivityLogEntry[];
+    planHealth?: PlanHealth;
+    contextScopeNote?: string;
+  };
   getSelectedItem: () => PlanItem | null;
   getIncompleteDependencies: (id: string) => PlanItem[];
   addActivityLog: (entry: Omit<ActivityLogEntry, 'id' | 'timestamp'>) => void;
@@ -325,12 +344,30 @@ export const useWorkspaceStore = create<WorkspaceState>()(
 
       getWorkspace: () => {
         const state = get();
+        const scope = state.contextScope;
+
+        const items = state.items
+          .filter((item) => scope.completedItems || item.status !== 'done')
+          .map((item) => applyContextScopeToItem(item, scope));
+
+        const omittedScopes: string[] = [];
+        if (!scope.boardState) omittedScopes.push('boardState');
+        if (!scope.currentItem) omittedScopes.push('currentItem');
+        if (!scope.dependencies) omittedScopes.push('dependencies');
+        if (!scope.completedItems) omittedScopes.push('completedItems');
+        if (!scope.teamInformation) omittedScopes.push('teamInformation');
+
         return {
           id: state.id,
           title: state.title,
-          items: state.items,
-          selectedItemId: state.selectedItemId,
+          items: scope.boardState ? items : [],
+          selectedItemId: scope.currentItem ? state.selectedItemId : null,
           updatedAt: state.updatedAt,
+          ...(scope.activityHistory ? { recentActivity: state.activityLog.slice(-10) } : {}),
+          ...(scope.planStatus ? { planHealth: computePlanHealth(state.items) } : {}),
+          ...(omittedScopes.length > 0
+            ? { contextScopeNote: `The human has disabled these context scopes, so the corresponding data is withheld or empty: ${omittedScopes.join(', ')}. See Context Scope in the Workspace UI.` }
+            : {}),
         };
       },
 

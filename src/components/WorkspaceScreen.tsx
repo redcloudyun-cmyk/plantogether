@@ -12,6 +12,10 @@ export default function WorkspaceScreen() {
   return (
     <div className="flex-1 flex overflow-hidden bg-[#f7f9fc]">
       <div className="flex-1 overflow-y-auto">
+        <div className="px-4 pt-4">
+          <AgentMissionCard />
+        </div>
+
         <Board />
 
         <div className="px-4 pb-6 pt-3 flex flex-col gap-3">
@@ -20,7 +24,6 @@ export default function WorkspaceScreen() {
             <CriticalPathCard />
           </div>
 
-          <AgentMissionCard />
           <AgentProposalPanel />
         </div>
       </div>

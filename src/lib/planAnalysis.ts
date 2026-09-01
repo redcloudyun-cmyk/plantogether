@@ -19,8 +19,16 @@ export interface Conflict {
   id: string;
   type: ConflictType;
   itemIds: string[];
+  /** English fallback title — prefer translating via `titleKey` in the UI. */
   title: string;
+  /** English fallback detail sentence — prefer translating via `detailKey` + `detailParams` in the UI. */
   detail: string;
+  /** i18n dictionary key for the title, e.g. 'conflictBlockedTitle'. */
+  titleKey: string;
+  /** i18n dictionary key for a `{placeholder}` detail template. */
+  detailKey: string;
+  /** Values to interpolate into the translated detail template. */
+  detailParams: Record<string, string | number>;
 }
 
 export interface PlanHealth {
@@ -63,6 +71,9 @@ export function detectConflicts(items: PlanItem[], todayISO: string = todayISODa
         detail: `"${item.title}" is blocked by ${incomplete.length} incomplete item(s): ${incomplete
           .map((d) => d.title)
           .join(', ')}.`,
+        titleKey: 'conflictBlockedTitle',
+        detailKey: 'conflictBlockedDetail',
+        detailParams: { title: item.title, count: incomplete.length, names: incomplete.map((d) => d.title).join(', ') },
       });
     }
   }
@@ -76,6 +87,9 @@ export function detectConflicts(items: PlanItem[], todayISO: string = todayISODa
         itemIds: [item.id],
         title: 'Overdue Task',
         detail: `"${item.title}" was due ${item.dueDate} and is still ${item.status}.`,
+        titleKey: 'conflictOverdueTitle',
+        detailKey: 'conflictOverdueDetail',
+        detailParams: { title: item.title, due: item.dueDate ?? '', status: item.status },
       });
     }
   }
@@ -92,6 +106,9 @@ export function detectConflicts(items: PlanItem[], todayISO: string = todayISODa
           itemIds: [item.id, dep.id],
           title: 'Schedule Conflict',
           detail: `"${item.title}" is due ${item.dueDate} but depends on "${dep.title}", which isn't due until ${dep.dueDate}.`,
+          titleKey: 'scheduleConflictBadge',
+          detailKey: 'conflictScheduleDetail',
+          detailParams: { title: item.title, due: item.dueDate, depTitle: dep.title, depDue: dep.dueDate ?? '' },
         });
       }
     }
@@ -109,6 +126,9 @@ export function detectConflicts(items: PlanItem[], todayISO: string = todayISODa
         itemIds: [item.id],
         title: 'Locked Critical Task',
         detail: `"${item.title}" is locked and blocks ${blockingCount} other item(s) — the agent cannot help move it forward.`,
+        titleKey: 'conflictLockedCriticalTitle',
+        detailKey: 'conflictLockedCriticalDetail',
+        detailParams: { title: item.title, count: blockingCount },
       });
     }
   }
@@ -132,6 +152,11 @@ export function detectConflicts(items: PlanItem[], todayISO: string = todayISODa
           detail: `Circular dependency: ${cycle
             .map((cid) => byId.get(cid)?.title ?? cid)
             .join(' → ')} → ${byId.get(cycle[0])?.title ?? cycle[0]}.`,
+          titleKey: 'conflictCycleTitle',
+          detailKey: 'conflictCycleDetail',
+          detailParams: {
+            chain: `${cycle.map((cid) => byId.get(cid)?.title ?? cid).join(' → ')} → ${byId.get(cycle[0])?.title ?? cycle[0]}`,
+          },
         });
       }
       return;

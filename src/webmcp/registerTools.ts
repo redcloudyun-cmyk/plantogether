@@ -1,4 +1,4 @@
-import { useWorkspaceStore } from '../store/workspaceStore';
+import { useWorkspaceStore, applyContextScopeToItem } from '../store/workspaceStore';
 import type { ActivityStatus, ProposalChangeSet } from '../types/workspace';
 import { classifyRisk, decideAutonomyAction } from '../lib/risk';
 
@@ -108,9 +108,19 @@ export async function registerWebMCPTools(): Promise<() => void> {
         },
         execute: async () => {
           log('get_current_focus', 'Reading current focus');
+
+          if (!store.getState().contextScope.currentItem) {
+            logActivity('get_current_focus', 'Blocked by Context Scope (Current item disabled)', 'blocked');
+            return {
+              selectedItem: null,
+              message: 'The human has disabled the "Current item" context scope, so the current focus is not shared with the agent.',
+            };
+          }
+
           const item = store.getState().getSelectedItem();
           logActivity('get_current_focus', item ? item.title : 'None selected');
-          return item || { selectedItem: null, message: 'No item is currently selected by the human.' };
+          if (!item) return { selectedItem: null, message: 'No item is currently selected by the human.' };
+          return applyContextScopeToItem(item, store.getState().contextScope);
         },
       },
       { signal }

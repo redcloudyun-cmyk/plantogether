@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { computeCriticalPath, detectConflicts } from '../../lib/planAnalysis';
 import type { ItemStatus } from '../../types/workspace';
-import { useTranslation } from '../../i18n';
+import { useTranslation, translateConflict } from '../../i18n';
 
 const STATUS_STYLE: Record<ItemStatus, string> = {
   backlog: 'bg-surface-secondary border-border text-text-secondary',
@@ -60,7 +60,7 @@ export default function CriticalPathCard() {
       {pathConflict && (
         <div className="mt-3 flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
           <span className="text-amber-600 flex-shrink-0">⚠</span>
-          <p className="text-xs text-amber-800">{pathConflict.detail}</p>
+          <p className="text-xs text-amber-800">{translateConflict(pathConflict, t).detail}</p>
         </div>
       )}
     </div>

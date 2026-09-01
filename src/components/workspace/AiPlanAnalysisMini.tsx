@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { detectConflicts } from '../../lib/planAnalysis';
-import { useTranslation } from '../../i18n';
+import { useTranslation, translateConflict } from '../../i18n';
 
 export default function AiPlanAnalysisMini({ onViewWorkspace }: { onViewWorkspace?: () => void }) {
   const items = useWorkspaceStore((state) => state.items);
@@ -32,7 +32,7 @@ export default function AiPlanAnalysisMini({ onViewWorkspace }: { onViewWorkspac
       </button>
       {expanded && !onViewWorkspace && (
         <div className="mt-3 flex flex-col gap-1.5">
-          {conflicts.length === 0 ? <p className="text-xs text-text-tertiary">{t('noConflicts')}</p> : conflicts.map((conflict) => <p key={conflict.id} className="text-xs text-text-secondary border-l-2 border-amber-300 pl-2">{conflict.detail}</p>)}
+          {conflicts.length === 0 ? <p className="text-xs text-text-tertiary">{t('noConflicts')}</p> : conflicts.map((conflict) => <p key={conflict.id} className="text-xs text-text-secondary border-l-2 border-amber-300 pl-2">{translateConflict(conflict, t).detail}</p>)}
         </div>
       )}
     </div>

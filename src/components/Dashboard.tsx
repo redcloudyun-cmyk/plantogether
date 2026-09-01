@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useWorkspaceStore } from '../store/workspaceStore';
 import { computePlanHealth, detectConflicts, computeCriticalPath } from '../lib/planAnalysis';
 import AgentMissionCard from './workspace/AgentMissionCard';
-import { useTranslation, type TranslationKey } from '../i18n';
+import { useTranslation, translateConflict, type TranslationKey } from '../i18n';
 
 const CONFLICT_ICONS: Record<string, string> = {
   schedule_conflict: '⚠',
@@ -138,15 +138,18 @@ export default function Dashboard({ onOpenWorkspace }: { onOpenWorkspace: () => 
             <p className="text-sm text-text-tertiary">{t('noConflictsClean')}</p>
           ) : (
             <div className="flex flex-col gap-2">
-              {conflicts.map((c) => (
-                <div key={c.id} className="flex items-start gap-2 text-sm border-l-2 border-amber-300 pl-3 py-0.5">
-                  <span className="flex-shrink-0">{CONFLICT_ICONS[c.type] ?? '⚠'}</span>
-                  <div>
-                    <span className="font-medium text-text-primary">{c.title}</span>
-                    <p className="text-text-secondary text-xs mt-0.5">{c.detail}</p>
+              {conflicts.map((c) => {
+                const { title, detail } = translateConflict(c, t);
+                return (
+                  <div key={c.id} className="flex items-start gap-2 text-sm border-l-2 border-amber-300 pl-3 py-0.5">
+                    <span className="flex-shrink-0">{CONFLICT_ICONS[c.type] ?? '⚠'}</span>
+                    <div>
+                      <span className="font-medium text-text-primary">{title}</span>
+                      <p className="text-text-secondary text-xs mt-0.5">{detail}</p>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

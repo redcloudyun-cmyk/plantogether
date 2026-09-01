@@ -53,7 +53,14 @@ describe('WebMCP tool regression gate', () => {
 
   it('shares one source of truth between workspace state and current focus', async () => {
     const item = makeItem();
-    useWorkspaceStore.setState({ items: [item], selectedItemId: item.id });
+    useWorkspaceStore.setState({
+      items: [item],
+      selectedItemId: item.id,
+      contextScope: {
+        currentItem: true, boardState: true, dependencies: true, planStatus: true,
+        activityHistory: true, completedItems: true, teamInformation: true,
+      },
+    });
 
     const workspace = await tools.get('get_workspace_state')!.execute({}) as { items: PlanItem[]; selectedItemId: string };
     const focus = await tools.get('get_current_focus')!.execute({}) as PlanItem;
@@ -61,6 +68,44 @@ describe('WebMCP tool regression gate', () => {
     expect(workspace.selectedItemId).toBe(item.id);
     expect(workspace.items[0]).toEqual(focus);
     expect(focus).toEqual(useWorkspaceStore.getState().getSelectedItem());
+  });
+
+  it('lets the human restrict what Context Scope shares with the agent', async () => {
+    const doneItem = makeItem({ id: 'item_done', status: 'done' });
+    const item = makeItem({ dependencies: ['item_done'] });
+    useWorkspaceStore.setState({
+      items: [item, doneItem],
+      selectedItemId: item.id,
+      contextScope: {
+        currentItem: true, boardState: true, dependencies: false, planStatus: false,
+        activityHistory: false, completedItems: false, teamInformation: false,
+      },
+    });
+
+    const workspace = await tools.get('get_workspace_state')!.execute({}) as {
+      items: PlanItem[]; recentActivity?: unknown; planHealth?: unknown; contextScopeNote?: string;
+    };
+
+    // completedItems disabled -> the done item is withheld entirely
+    expect(workspace.items).toHaveLength(1);
+    expect(workspace.items[0].id).toBe(item.id);
+    // teamInformation disabled -> owner is stripped
+    expect(workspace.items[0].owner).toBeUndefined();
+    // dependencies disabled -> dependency list is stripped
+    expect(workspace.items[0].dependencies).toEqual([]);
+    // planStatus / activityHistory disabled -> those keys are absent
+    expect(workspace.planHealth).toBeUndefined();
+    expect(workspace.recentActivity).toBeUndefined();
+    expect(workspace.contextScopeNote).toContain('completedItems');
+
+    useWorkspaceStore.getState().selectItem(item.id);
+    const focus = await tools.get('get_current_focus')!.execute({}) as PlanItem;
+    expect(focus.owner).toBeUndefined();
+
+    useWorkspaceStore.setState({ contextScope: { ...useWorkspaceStore.getState().contextScope, currentItem: false } });
+    const blockedFocus = await tools.get('get_current_focus')!.execute({}) as { selectedItem: null; message: string };
+    expect(blockedFocus.selectedItem).toBeNull();
+    expect(blockedFocus.message).toMatch(/Current item/);
   });
 
   it('adds an item and preserves status during an unrelated update', async () => {

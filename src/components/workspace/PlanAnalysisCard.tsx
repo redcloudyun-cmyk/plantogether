@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { computePlanHealth, detectConflicts } from '../../lib/planAnalysis';
-import { useTranslation } from '../../i18n';
+import { useTranslation, translateConflict } from '../../i18n';
 
 const HEALTH_COLOR = (score: number) => (score >= 80 ? '#16a34a' : score >= 50 ? '#d97706' : '#dc2626');
 
@@ -100,15 +100,18 @@ export default function PlanAnalysisCard() {
           {conflicts.length === 0 ? (
             <p className="text-xs text-text-tertiary">{t('noConflictsClean')}</p>
           ) : (
-            conflicts.map((c) => (
-              <div key={c.id} className="flex items-start gap-2 text-xs border-l-2 border-amber-300 pl-3 py-0.5">
-                <span className="flex-shrink-0">{CONFLICT_ICON[c.type] ?? '⚠'}</span>
-                <div>
-                  <span className="font-medium text-text-primary">{c.title}</span>
-                  <p className="text-text-secondary mt-0.5">{c.detail}</p>
+            conflicts.map((c) => {
+              const { title, detail } = translateConflict(c, t);
+              return (
+                <div key={c.id} className="flex items-start gap-2 text-xs border-l-2 border-amber-300 pl-3 py-0.5">
+                  <span className="flex-shrink-0">{CONFLICT_ICON[c.type] ?? '⚠'}</span>
+                  <div>
+                    <span className="font-medium text-text-primary">{title}</span>
+                    <p className="text-text-secondary mt-0.5">{detail}</p>
+                  </div>
                 </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       )}

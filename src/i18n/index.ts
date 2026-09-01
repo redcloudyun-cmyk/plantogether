@@ -40,6 +40,11 @@ const en = {
   stillAwaitingApproval: 'still awaiting approval', protectedLabel: 'protected', conflictsSectionTitle: 'CONFLICTS',
   contextCurrentFocus: 'Current focus', contextWorkspaceState: 'Workspace state',
   restrictedDeleteItems: 'Delete items or the workspace', restrictedLockUnlock: 'Lock or unlock items (human-only)', restrictedManageUsers: 'Manage users',
+  conflictBlockedTitle: 'Blocked Dependency', conflictBlockedDetail: '"{title}" is blocked by {count} incomplete item(s): {names}.',
+  conflictOverdueTitle: 'Overdue Task', conflictOverdueDetail: '"{title}" was due {due} and is still {status}.',
+  conflictScheduleDetail: '"{title}" is due {due} but depends on "{depTitle}", which isn\'t due until {depDue}.',
+  conflictLockedCriticalTitle: 'Locked Critical Task', conflictLockedCriticalDetail: '"{title}" is locked and blocks {count} other item(s) — the agent cannot help move it forward.',
+  conflictCycleTitle: 'Dependency Conflict', conflictCycleDetail: 'Circular dependency: {chain}.',
 };
 
 const ko: typeof en = {
@@ -79,6 +84,11 @@ const ko: typeof en = {
   stillAwaitingApproval: '아직 승인 대기 중', protectedLabel: '보호됨', conflictsSectionTitle: '충돌',
   contextCurrentFocus: '현재 포커스', contextWorkspaceState: '워크스페이스 상태',
   restrictedDeleteItems: '항목 또는 워크스페이스 삭제', restrictedLockUnlock: '항목 잠금/해제 (사람 전용)', restrictedManageUsers: '사용자 관리',
+  conflictBlockedTitle: '차단된 의존성', conflictBlockedDetail: '"{title}"은(는) 완료되지 않은 항목 {count}개에 의해 차단되었습니다: {names}.',
+  conflictOverdueTitle: '기한 초과 작업', conflictOverdueDetail: '"{title}"의 마감일은 {due}였으며 아직 {status} 상태입니다.',
+  conflictScheduleDetail: '"{title}"의 마감일은 {due}이지만 "{depTitle}"에 의존하며, 이 항목은 {depDue}까지 마감이 아닙니다.',
+  conflictLockedCriticalTitle: '잠긴 주요 작업', conflictLockedCriticalDetail: '"{title}"은(는) 잠겨 있으며 다른 항목 {count}개를 차단하고 있습니다 — 에이전트가 이를 진행시킬 수 없습니다.',
+  conflictCycleTitle: '의존성 충돌', conflictCycleDetail: '순환 의존성: {chain}.',
 };
 
 export type TranslationKey = keyof typeof en;
@@ -96,4 +106,25 @@ export const useLanguageStore = create<LanguageState>()(
 export function useTranslation() {
   const language = useLanguageStore((state) => state.language);
   return { language, t: (key: TranslationKey) => dictionaries[language][key] };
+}
+
+const STATUS_KEYS = new Set(['backlog', 'planned', 'doing', 'done']);
+
+function interpolate(template: string, params: Record<string, string | number>): string {
+  return template.replace(/\{(\w+)\}/g, (match, key: string) => (key in params ? String(params[key]) : match));
+}
+
+/** Translates a `Conflict` (from `lib/planAnalysis`) using its `titleKey`/`detailKey`/`detailParams`. */
+export function translateConflict(
+  conflict: { titleKey: string; detailKey: string; detailParams: Record<string, string | number> },
+  t: (key: TranslationKey) => string
+): { title: string; detail: string } {
+  const params = { ...conflict.detailParams };
+  if (typeof params.status === 'string' && STATUS_KEYS.has(params.status)) {
+    params.status = t(params.status as TranslationKey);
+  }
+  return {
+    title: t(conflict.titleKey as TranslationKey),
+    detail: interpolate(t(conflict.detailKey as TranslationKey), params),
+  };
 }
