@@ -117,7 +117,7 @@ export default function Board() {
 
   return (
     <>
-      <div className="flex-1 overflow-hidden p-6" onClick={handleBoardClick}>
+      <div className="p-6 pb-0" onClick={handleBoardClick}>
         <DndContext
           sensors={sensors}
           collisionDetection={closestCorners}
@@ -125,7 +125,7 @@ export default function Board() {
           onDragOver={handleDragOver}
           onDragEnd={handleDragEnd}
         >
-          <div className="grid grid-cols-4 gap-4 h-full">
+          <div className="grid grid-cols-4 gap-4">
             {COLUMNS.map((col) => (
               <Column
                 key={col.id}

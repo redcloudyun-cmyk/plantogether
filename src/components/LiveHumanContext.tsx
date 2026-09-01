@@ -18,6 +18,10 @@ function formatDate(dateStr?: string): string {
   }
 }
 
+function formatTime(iso: string): string {
+  return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
 export default function LiveHumanContext() {
   const selectedItemId = useWorkspaceStore((s) => s.selectedItemId);
   const items = useWorkspaceStore((s) => s.items);
@@ -33,9 +37,12 @@ export default function LiveHumanContext() {
 
       {selected ? (
         <div className="flex flex-col gap-3">
-          <div>
-            <p className="text-[10px] text-text-tertiary uppercase tracking-wide mb-1">Selected</p>
-            <p className="text-sm font-medium text-text-primary leading-snug">{selected.title}</p>
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <p className="text-[10px] text-text-tertiary uppercase tracking-wide mb-1">Selected</p>
+              <p className="text-sm font-medium text-text-primary leading-snug">{selected.title}</p>
+            </div>
+            {selected.locked && <span className="text-amber-600 flex-shrink-0 mt-0.5">🔒</span>}
           </div>
 
           <dl className="flex flex-col gap-1.5 text-xs">
@@ -50,6 +57,16 @@ export default function LiveHumanContext() {
             <div className="flex items-center justify-between">
               <dt className="text-text-tertiary">Owner</dt>
               <dd className="text-text-primary font-medium">{selected.owner || '—'}</dd>
+            </div>
+            {selected.locked && (
+              <div className="flex items-center justify-between">
+                <dt className="text-text-tertiary">Locked</dt>
+                <dd className="text-amber-600 font-medium">By you</dd>
+              </div>
+            )}
+            <div className="flex items-center justify-between">
+              <dt className="text-text-tertiary">Last Edited</dt>
+              <dd className="text-text-primary font-medium">{formatTime(selected.updatedAt)}</dd>
             </div>
           </dl>
 
