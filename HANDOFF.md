@@ -4,11 +4,15 @@
 
 ## 현재 커밋 상태
 
-- 최신 커밋: `b8e7643` — "Add i18n, real WithGeX logo/sidebar, priority field, and Agent Mission"
-- 브랜치: `main`, `origin/main`과 완전히 동기화됨. CI/배포 확인 완료 (통과).
+- 최신 커밋: `62eb579` — "Fix sidebar logo visibility and complete i18n coverage across the app"
+- 브랜치: `main`, `origin/main`과 완전히 동기화됨. 커밋 직전/직후 `git fetch` + `git log HEAD..origin/main` 확인함(차이 없음). CI/배포는 push 직후 큐잉됨 — 다음 작업자는 `gh run list --repo redcloudyun-cmyk/plantogether --limit 3`로 성공 여부 재확인할 것.
 - 라이브 URL:
-  - **https://redcloudyun-cmyk.github.io/plantogether/** — 이 저장소의 GitHub Actions가 직접 배포, 항상 `main` 최신 커밋과 동기화됨. **신뢰 가능, 확인 결과 최신 반영됨.**
-  - **https://withgex-test.agex.site/** — 다른 세션/도구가 운영하는 별도 배포로 추정. **2026-09-01 기준 최신 커밋(`b8e7643`)을 반영하지 못하고 있음을 확인** — 여전히 텍스트 로고, "Mina Park" 구버전 owner 표기, Agent Mission 카드 없음. 이 세션은 여기 배포 권한이 없어 직접 갱신 불가. **다음 작업자는 이 URL을 사용하기 전에 최신 화면인지 반드시 재확인할 것.**
+  - **https://redcloudyun-cmyk.github.io/plantogether/** — 이 저장소의 GitHub Actions가 직접 배포, 항상 `main` 최신 커밋과 동기화됨. **신뢰 가능.**
+  - **https://withgex-test.agex.site/** — 다른 세션/도구가 운영하는 별도 배포. 이 세션은 배포 권한이 없어 직접 갱신 불가. **다음 작업자는 이 URL을 사용하기 전에 최신 화면인지 반드시 재확인할 것.**
+- **이번 라운드에서 고친 것**: 사용자가 스크린샷으로 "로고가 안 보임 / 다국어가 안 보임"이라고 지적. 원인 두 가지를 찾아 수정:
+  1. 사이드바 로고가 검정 텍스트 PNG(`withgex-logo.png`)를 다크 네이비(`#071b31`) 배경에 쓰고 있어 실질적으로 안 보였음 → 흰색 텍스트 버전(`src/assets/withgex-logo-white.png`)으로 교체.
+  2. 언어 토글이 Settings 화면 안에만 있어서 다른 화면에서는 아예 안 보였음 → `App.tsx`의 공용 TopBar에 전역 토글 추가. 또한 Board/Column/PlanCard/PlanAnalysisCard/CriticalPathCard/StatusBar/CardEditor/LiveHumanContext/Dashboard/SettingsScreen/ActivityScreen/AgentProposalPanel 전반에 걸쳐 한국어 전환 시 여전히 영어로 남아있던 카드 제목·상태/우선순위 라벨·통계 라벨·자율성 모드 라벨·테이블 헤더 등을 전부 찾아 번역 연결함. (Playwright로 EN/KO 양쪽 스크린샷 재확인 완료, 콘솔 에러 없음.)
+  - **의도적으로 남겨둔 미번역 부분**(기존 세션들의 전례를 따름): `detectConflicts()`(`src/lib/planAnalysis.ts`)가 반환하는 `title`/`detail` 문자열은 하드코딩된 영어 문장이라 Plan Analysis 상세 목록, Critical Path 지연 배너, Dashboard의 "충돌" 카드 상세, Agent Mission 미니 패널에 여전히 영어로 표시됨. 완전히 고치려면 이 함수가 사전 조합된 문자열 대신 i18n 키 + 파라미터를 반환하도록 리팩터링해야 함 — 범위상 이번엔 제외. 그 외 `chrome://flags/#enable-webmcp-testing` 안내 배너, WebMCP 도구 설명(Settings›TOOLS), 자율성 모드 설명 문장(Settings›AUTONOMY)도 기술적 내용이라 영어 유지.
 
 ## 이번 세션(들)에서 한 일 (시간순 요약)
 
@@ -21,14 +25,16 @@
 7. 파비콘을 WithGeX "W" 마크로 교체(`8a31dce`).
 8. **(병행 세션이 완료)** 목업 시각 품질에 맞춘 UI 리빌드(`893bfa7` "Rebuild UI to match WithGeX mockups").
 9. **(병행 세션이 작업, 이 세션이 검증 후 커밋)** i18n(영/한, 기본 영어, localStorage 저장) 전체 화면 연결, 실제 투명 WithGeX 로고 이미지로 좌측 다크 사이드바 구현, `priority`(low/medium/high) 필드 store/WebMCP/UI 전체 연동, localStorage 마이그레이션(`migratePersistedWorkspace`), Agent Mission 카드(실제 activity log/proposal 기반, 가짜 아님), Proposal Before/After Plan Health 계산(`proposalImpact.ts`), 테스트 47개로 확장(`b8e7643`).
+10. **(이 세션)** 로고 가시성 및 i18n 커버리지 완결(`62eb579`) — 위 "이번 라운드에서 고친 것" 참고.
 
 ## 아직 안 한 일 / 알려진 이슈
 
-1. **`withgex-test.agex.site` 배포 지연** — 위 참고. 이 배포를 누가/어떻게 갱신하는지 이 세션은 모름. Devpost 제출 전 반드시 확인·해결 필요.
+1. **`withgex-test.agex.site` 배포 지연 가능성** — 이 배포를 누가/어떻게 갱신하는지 이 세션은 모름. Devpost 제출 전 반드시 최신 커밋(`62eb579`) 반영 여부 확인·해결 필요.
 2. **Chrome 실환경 WebMCP Judge Test 미수행** — 자동화 환경(Playwright)에서는 `document.modelContext`를 모킹해서 5개 도구 호출/UI 갱신/Proposal/Lock/Revert를 전부 검증했지만, **실제 Chrome 149+ 의 `chrome://flags/#enable-webmcp-testing` 활성화 환경 + 실제 MCP 클라이언트로는 검증하지 못함** — 이 환경엔 그런 브라우저/클라이언트가 없음. 사람이 실제 Chrome에서 한 번 더 확인해야 함.
 3. **§36 데모 영상 실제 녹화 + 내레이션 타이밍 리허설** — 사람이 직접 해야 함.
 4. Context Scope 토글은 아직 정적 표시(값은 store에 있지만 UI에서 실제로 토글해서 도구 동작을 바꾸지는 않음).
-5. `mockup/`(ChatGPT 생성 참고 이미지 4장)과 `logo/withgex logo png.png`(중복 파일, `src/assets/withgex-logo.png`와 동일)는 의도적으로 커밋 제외함 — 필요 없으면 정리해도 됨.
+5. `mockup/`(ChatGPT 생성 참고 이미지 4장)과 `logo/` 폴더의 원본 로고 파일들(`withgex logo png.png`, `withgex logo 2 png.png` — 가공된 버전이 `src/assets/withgex-logo.png`, `withgex-logo-white.png`로 이미 들어가 있음)은 의도적으로 커밋 제외함 — 필요 없으면 정리해도 됨.
+6. **`detectConflicts()`의 하드코딩된 영어 문자열** — Plan Analysis 상세, Critical Path 지연 배너, Dashboard 충돌 카드, Agent Mission 미니 패널에서 여전히 영어로 표시됨(위 참고). i18n 키/파라미터 기반으로 리팩터링하면 완전히 해결 가능하지만 아직 미착수.
 
 ## 작업 전 필수 확인사항
 
