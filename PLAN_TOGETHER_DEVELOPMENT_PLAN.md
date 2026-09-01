@@ -9,7 +9,9 @@
 
 > **v1.1 → v1.4 전환 (2026-09-01)**: v1.1(단일 Kanban 화면, 5 tools, Reset Demo)은 완료·배포되어 있음. v1.4는 이를 4-screen 제품(Dashboard/Workspace/Activity/Settings)으로 확장하고, 이번 버전의 핵심 신규 기능인 **Agent Proposal / Human Approval** 워크플로우, Risk Classification, Plan Health, Conflict Detection, Critical Path를 추가한다. 아래 내용은 v1.4 원본 계획서를 기준으로 재정리한 것이며, 진행 상황은 문서 하단 "구현 상태" 절 참고.
 >
-> **병행 세션 합류 (2026-09-01)**: 같은 저장소에서 다른 Claude 세션(Antigravity IDE)이 동시에 Proposal/Approval·Risk 기반 Autonomy·Plan Health/Conflict Detection/Critical Path/Dashboard를 독립적으로 구현했음. 중복 확인 후 `feature/agent-proposal-approval` 브랜치를 리뷰(tsc/lint/vitest 33개/build/Playwright 통과)하고 `main`에 머지함(커밋 `8353911`). 이 세션에서 진행 중이던 동일 범위의 미완성 구현은 폐기하고, 이 문서와 데모 데이터셋만 선별적으로 이어받음. 이어서 이 세션이 Activity 화면과 Settings/WebMCP 화면을 병합된 코드 위에 추가 구현함(커밋 `60f015b`). P0~P2 대부분 완료 — 남은 것은 Test Gate/Judge Access Test 수행과 데모 리허설뿐. 자세한 내용은 문서 하단 "43. 구현 상태" 참고.
+> **병행 세션 합류 (2026-09-01)**: 같은 저장소에서 다른 Claude 세션(Antigravity IDE)이 동시에 Proposal/Approval·Risk 기반 Autonomy·Plan Health/Conflict Detection/Critical Path/Dashboard를 독립적으로 구현했음. 중복 확인 후 `feature/agent-proposal-approval` 브랜치를 리뷰(tsc/lint/vitest 33개/build/Playwright 통과)하고 `main`에 머지함(커밋 `8353911`). 이 세션에서 진행 중이던 동일 범위의 미완성 구현은 폐기하고, 이 문서와 데모 데이터셋만 선별적으로 이어받음. 이어서 이 세션이 Activity 화면과 Settings/WebMCP 화면을 병합된 코드 위에 추가 구현함(커밋 `60f015b`).
+>
+> **Test Gate 실행 완료 (2026-09-01)**: §37/§38을 Playwright E2E로 실제 수행 — 그 과정에서 **agent의 `update_item`이 status를 건드리지 않아도 아이템의 status를 지워서 WebMCP 전체가 영구적으로 죽는 치명적 버그**를 발견해 수정함(커밋 `4f52c94`). Reset Demo 5회 연속, 전체 데모 시나리오 3회 연속, Live URL 새 브라우저 검증까지 전부 통과. 자세한 결과는 §37/§38 바로 아래 "Test Gate / Judge Access Test 실행 결과" 절 참고. 남은 것은 §36 데모 영상의 실제 내레이션 타이밍 리허설뿐 — 이건 사람이 직접 해야 함.
 
 ---
 
@@ -802,8 +804,8 @@ PlanTogether는 다음 세 가지 시각을 동시에 만족해야 한다.
 ## P0 — Submission Safety
 
 - [x] main branch, LICENSE, README(v1.1 버전), Live Deployment(GitHub Pages) — v1.1에서 완료, v1.4 스크린 확장에 맞춰 README는 재작성 필요
-- [ ] WebMCP E2E — v1.4 신규 기능(Proposal 등) 포함해 재검증 필요
-- [ ] Demo Reliability — v1.4 데모 스크립트 기준 재검증 필요
+- [x] WebMCP E2E — Playwright + 모킹된 `document.modelContext`로 5개 tool 전부 실제 호출 검증, 치명적 버그(위 참고) 발견·수정
+- [x] Demo Reliability — Reset Demo 5회 연속 + 데모 시나리오 3회 연속, 콘솔 에러 0건
 
 ## P1 — Core Product
 
@@ -835,3 +837,21 @@ PlanTogether는 다음 세 가지 시각을 동시에 만족해야 한다.
 - [x] Activity Detail 뷰 — ActivityScreen 각 행 클릭 시 인라인으로 펼쳐짐 (별도 페이지/모달은 아님)
 
 > **2026-09-01 기준 남은 작업 (우선순위 순)**: 1) Test Gate(§37) 체크리스트 + Judge Access Test(§38) 실제 수행, 2) 데모 스크립트(§36) 리허설 및 타이밍 확인. Context Scope 토글(§9)과 What AI Sees/AI Permissions 패널은 최하위 우선순위로 남겨둔다 — Risk 정보 자체는 Proposal 카드와 Activity 로그에 이미 노출되어 있음.
+
+## Test Gate (§37) / Judge Access Test (§38) 실행 결과 — 2026-09-01
+
+Playwright로 `document.modelContext`를 모킹해 5개 Tool을 실제로 호출하는 End-to-End 스크립트, Reset Demo 5회 연속, 전체 데모 시나리오(9씬) 3회 연속, 그리고 배포된 Live URL을 새 브라우저 컨텍스트로 검증했다. 사람이 영상 녹화 타이밍을 재는 것 등 순수 수동 항목을 빼고는 전부 자동 검증했다.
+
+**Build**: `npm install` / `npm run build` / `npm run lint` — 전부 통과.
+
+**WebMCP**: `document.modelContext` 존재 확인, 5 tools 정확히 등록(React StrictMode의 이중 effect 실행 후에도 정확히 5개로 안정화), duplicate registration으로 인한 크래시 없음, 5개 tool 각각(`get_workspace_state`/`get_current_focus`/`add_item`/`update_item`/`analyze_plan`) 정상 동작 — 전부 통과.
+
+**State**: tool call 시 page refresh/navigation 없음, agent 변경이 UI에 즉시 반영, human이 수정한 값을 agent가 `get_workspace_state`로 다시 읽을 수 있음, localStorage restore 정상 — 전부 통과.
+
+**Human Authority**: locked item에 대한 agent `update_item` 차단(`ITEM_LOCKED_BY_HUMAN`), Proposal apply/reject 정상, Revert 정상 — 전부 통과.
+
+**Reliability**: Reset Demo 5회 연속 정상(매번 6개 아이템/1개 잠금으로 정확히 복원), 전체 데모 시나리오 3회 연속 성공(콘솔 에러 0건), Live URL을 새 브라우저 컨텍스트(로컬스토리지 없음, WebMCP 미지원 상태 포함)에서 확인 — 정상 로드·정상 폴백(WebMCP Unavailable 표시)·4개 화면 전부 동작·Reset Demo·새로고침 전부 정상.
+
+**🐛 발견 및 수정한 치명적 버그**: `update_item`이 `status`를 바꾸지 않는 호출에서도 내부적으로 `status: undefined`를 강제로 포함시켜서, 이 값이 store의 객체 스프레드(`{ ...item, ...changes }`)로 아이템에 그대로 덮어써져 실제 status가 사라지는 문제가 있었다. 이후 Board의 상태별 그룹핑(`grouped[item.status].push(...)`)이 `undefined` 키에 접근해 렌더링이 크래시하고, App의 effect cleanup이 실행되며 WebMCP 5개 tool이 통째로 등록 해제되어 이후 어떤 tool도 호출할 수 없게 됐다 — 즉 **agent가 status를 건드리지 않는 첫 update_item 호출(또는 그 결과로 만들어진 Proposal의 승인) 직후 WebMCP가 영구적으로 죽는** 심각한 버그였다. Proposal 승인 플로우를 End-to-End로 테스트하다가 발견했고, `status`를 실제로 변경할 때만 changeset에 포함하도록 수정했다(커밋 `4f52c94`). 수정 후 전체 재검증 통과.
+
+**보류(사람이 직접 확인 필요)**: §36 데모 스크립트의 실제 90~150초 내레이션 타이밍, 최종 데모 영상 녹화.
