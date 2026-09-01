@@ -11,7 +11,11 @@
 >
 > **병행 세션 합류 (2026-09-01)**: 같은 저장소에서 다른 Claude 세션(Antigravity IDE)이 동시에 Proposal/Approval·Risk 기반 Autonomy·Plan Health/Conflict Detection/Critical Path/Dashboard를 독립적으로 구현했음. 중복 확인 후 `feature/agent-proposal-approval` 브랜치를 리뷰(tsc/lint/vitest 33개/build/Playwright 통과)하고 `main`에 머지함(커밋 `8353911`). 이 세션에서 진행 중이던 동일 범위의 미완성 구현은 폐기하고, 이 문서와 데모 데이터셋만 선별적으로 이어받음. 이어서 이 세션이 Activity 화면과 Settings/WebMCP 화면을 병합된 코드 위에 추가 구현함(커밋 `60f015b`).
 >
-> **Test Gate 실행 완료 (2026-09-01)**: §37/§38을 Playwright E2E로 실제 수행 — 그 과정에서 **agent의 `update_item`이 status를 건드리지 않아도 아이템의 status를 지워서 WebMCP 전체가 영구적으로 죽는 치명적 버그**를 발견해 수정함(커밋 `4f52c94`). Reset Demo 5회 연속, 전체 데모 시나리오 3회 연속, Live URL 새 브라우저 검증까지 전부 통과. 자세한 결과는 §37/§38 바로 아래 "Test Gate / Judge Access Test 실행 결과" 절 참고. 남은 것은 §36 데모 영상의 실제 내레이션 타이밍 리허설뿐 — 이건 사람이 직접 해야 함.
+> **Test Gate 실행 완료 (2026-09-01)**: §37/§38을 Playwright E2E로 실제 수행 — 그 과정에서 **agent의 `update_item`이 status를 건드리지 않아도 아이템의 status를 지워서 WebMCP 전체가 영구적으로 죽는 치명적 버그**를 발견해 수정함(커밋 `4f52c94`). Reset Demo 5회 연속, 전체 데모 시나리오 3회 연속, Live URL 새 브라우저 검증까지 전부 통과. 자세한 결과는 §37/§38 바로 아래 "Test Gate / Judge Access Test 실행 결과" 절 참고.
+>
+> **Workspace를 목업에 맞게 재구성 (2026-09-01)**: 사용자가 제공한 실제 목업 이미지와 비교해 Workspace가 부족하다는 피드백에 따라 Plan Analysis(헬스 게이지 + Detected Issues), Critical Path(체인 + 지연 배너), 인라인 Agent Proposal 테이블을 보드 아래에 추가하고, 우측 레일을 Live Human Context / AI Plan Analysis / Context Scope(What AI Sees) / AI Permissions로 재구성함(커밋 `2f2291c`). 기존 모달 방식 `ProposalModal`은 인라인 `AgentProposalPanel`로 대체. 테스트 셋업에 RTL cleanup이 빠져있던 버그도 함께 발견·수정.
+>
+> **WithGeX로 브랜드명 통일 (2026-09-01)**: 공식 제품명이 "PlanTogether"가 아니라 "WithGeX"임을 확정. UI/README/WebMCP 설명/localStorage 키 전부 전환(커밋 `2951a2a`, `20a5b8e`). GitHub 저장소 이름(및 그에 종속된 Pages 배포 경로)은 실제 인프라라 별도 결정 없이는 유지. README의 Live Demo 링크는 이제 `https://withgex-test.agex.site`(다른 세션이 운영하는 것으로 보이는 별도 배포)를 1순위로, 기존 GitHub Pages를 미러로 안내.
 
 ---
 
