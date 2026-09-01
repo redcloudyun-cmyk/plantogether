@@ -1,6 +1,6 @@
 # PlanTogether — WebMCP Challenge 개발 실행 계획
 
-> **진행 상황 (2026-09-01)**: P0 중 main branch 정리 / LICENSE / README 완료. P1(Live Human Context, Reset Demo + Demo Dataset, WebMCP Live Activity Trace), P1 Refactor(lock_item 제거, analyze_plan 개명), P2(moveItem lock 일관성, validation 통일, activity log UUID) 전부 완료. 남은 것은 **Live Deployment(P0-4)**와 **P3**(UI polish, Demo video, Devpost 제출 — 후자 둘은 사람이 직접 진행). 자세한 내용은 섹션 18의 체크리스트 참고.
+> **진행 상황 (2026-09-01)**: P0(main branch / LICENSE / README / Live Deployment), P1(Live Human Context, Reset Demo + Demo Dataset, WebMCP Live Activity Trace), P1 Refactor(lock_item 제거, analyze_plan 개명), P2(moveItem lock 일관성, validation 통일, activity log UUID) 전부 완료. Live Deployment는 Vercel/Cloudflare 대신 **GitHub Pages**로 진행 (이미 인증된 GitHub 계정만으로 계정 연동 없이 배포 가능해서 선택 — 사용자 확인됨): https://redcloudyun-cmyk.github.io/plantogether/. 남은 것은 **P3**(UI polish, Demo video, Devpost 제출 — 후자 둘은 사람이 직접 진행). 자세한 내용은 섹션 18의 체크리스트 참고.
 
 **Version:** 1.1
 **Target:** OpenAI × Devpost WebMCP Challenge
@@ -974,7 +974,7 @@ Multi Agent
 - [x] MIT LICENSE
 - [x] Challenge README
 - [x] Public repository
-- [ ] Live deployment URL — **대기 중**: 배포 플랫폼(Vercel/Cloudflare Pages/기타)과 계정 연동은 사용자 확인 필요
+- [x] Live deployment URL — **완료**: GitHub Pages, https://redcloudyun-cmyk.github.io/plantogether/ (GitHub Actions로 `main` 푸시마다 자동 배포)
 
 ## Quality
 
@@ -996,7 +996,7 @@ P0
 1. main branch 정리                 [완료]
 2. LICENSE                          [완료]
 3. README                           [완료]
-4. Live Deployment                  [대기 — 플랫폼/계정 확인 필요]
+4. Live Deployment                  [완료 — GitHub Pages]
 
 P1
 5. Live Human Context                [완료]

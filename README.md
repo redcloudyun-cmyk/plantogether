@@ -23,7 +23,9 @@ There's no export step, no sync delay, and no second source of truth. The board 
 
 ## Live Demo
 
-🚧 Live deployment coming soon — in the meantime, see [Local Development](#local-development) below to run it yourself.
+**[redcloudyun-cmyk.github.io/plantogether](https://redcloudyun-cmyk.github.io/plantogether/)**
+
+Deployed automatically from `main` via GitHub Actions (`.github/workflows/deploy.yml`) to GitHub Pages.
 
 ## Human-Agent Collaboration
 
