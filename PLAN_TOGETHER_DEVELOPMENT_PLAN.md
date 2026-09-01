@@ -6,7 +6,9 @@
 마지막 갱신: 2026-09-01
 기준: 현재 저장소 코드 상태 (`src/` 전체 스캔, git 이력 없음 — 로컬 전용 프로젝트)
 
-> **진행 상황**: Phase 5(의존성 시각화 & 검증), Phase 6(신뢰 경계 — 되돌리기) 구현 완료. 아래 "4. 알려진 갭"의 상위 두 항목은 해소됨 — 섹션 5.1, 5.2 참고.
+> **진행 상황**: Phase 5(의존성 시각화 & 검증), Phase 6(신뢰 경계 — 되돌리기), Phase 8 일부(테스트 + CI) 구현 완료. Phase 7(실시간 협업 확장)과 Phase 8의 배포 결정은 아직 남아있음.
+>
+> **저장소**: https://github.com/redcloudyun-cmyk/plantogether (public), 기본 브랜치 `main`.
 
 ---
 
@@ -61,8 +63,7 @@
 - ~~`dependencies` 필드가 데이터에만 존재하고 시각화되지 않음~~ — **해결됨 (Phase 5)**, 섹션 5.1 참고.
 - ~~`unlock_item`이 store에는 있지만 WebMCP 도구로 노출되지 않음~~ — **결정됨 (Phase 6)**: 의도적으로 노출하지 않음. 사람이 건 락을 에이전트가 스스로 풀 수 있으면 락 기능 자체의 신뢰 경계가 무의미해지므로, 락 해제는 계속 사람 전용으로 유지. 섹션 5.2 참고.
 - **`get_current_focus` / `rebalance_plan`을 제외하면 실시간 다중 에이전트·다중 사용자 동기화가 없음** — 지금은 단일 브라우저 탭 + localStorage뿐이라 "함께 계획한다"는 컨셉이 실제로는 한 사람 + 한 에이전트로 국한됨.
-- **테스트 없음** — 컴포넌트/스토어 단위 테스트, WebMCP 도구 입력 검증 테스트 전무.
-- **에이전트 쪽 검증 vs. 사람 쪽 검증 비대칭** — `CardEditor.tsx`(사람이 쓰는 폼)는 날짜/상태 검증이 없고, `registerTools.ts`(에이전트 경로)만 엄격히 검증함.
+- ~~테스트 없음~~ — **해소됨 (Phase 8 일부)**: 스토어 단위 테스트 + 핵심 컴포넌트 테스트 추가, 섹션 5.4 참고. WebMCP 도구(`registerTools.ts`) 자체에 대한 테스트는 아직 없음 (실제 `document.modelContext` 없이 단위 테스트하기 까다로움 — 남은 과제).
 - **`Board.tsx`의 `handleDragOver`가 빈 함수** — 컬럼 간 드래그 중 실시간 미리보기 이동이 없어 드롭 전까지 카드가 원래 컬럼에 남아있음 (기능은 하지만 UX 개선 여지).
 
 ## 5. 다음 단계 로드맵
@@ -87,10 +88,17 @@
 - localStorage → 서버 기반 동기화(WebSocket 또는 CRDT)로 전환해 실제로 여러 탭/기기에서 "함께" 볼 수 있게.
 - 여러 워크스페이스 지원 (`Workspace.id`는 이미 있으나 UI에서 전환 불가).
 
-### Phase 8 — 품질 & 배포
-- Vitest + React Testing Library로 스토어/컴포넌트 테스트 추가.
-- `CardEditor` 쪽에도 날짜 포맷 검증 등 동일한 유효성 검사 적용.
-- CI(빌드+린트) 파이프라인, 배포 타겟 결정 (Vercel/Netlify 등).
+### Phase 8 — 품질 & 배포 🟡 일부 완료 (2026-09-01)
+- ✅ Vitest + React Testing Library 도입 (`vite.config.ts`의 `test` 설정, `src/test/setup.ts`).
+  - `src/store/workspaceStore.test.ts`: `addItem`/`updateItem`/`moveItem`/`revertItem`/`lockItem`·`unlockItem` — 락 검증, 의존성 차단, 되돌리기 스냅샷 로직 등 14개 테스트.
+  - `src/components/PlanCard.test.tsx`: Blocked 배지 표시/숨김, Revert 버튼 클릭 시 실제 상태 복원까지 검증.
+  - `npm test`(1회 실행) / `npm run test:watch` 스크립트 추가.
+- ✅ GitHub Actions CI (`.github/workflows/ci.yml`): main 브랜치 push/PR마다 `npm ci` → `lint` → `tsc -b` → `test` → `build` 순서로 실행.
+- ⬜ `registerTools.ts`의 WebMCP 도구 자체 테스트 (mock `document.modelContext`로 등록/실행 검증) — 아직 없음.
+- ⬜ 배포 타겟 결정 및 실제 배포 (Vercel/Netlify 등) — 아직 미정, 섹션 6 참고.
+- 검증: `npx tsc -b`, `npx oxlint`, `npx vitest run` 모두 통과 확인.
+
+> 참고: 애초 "CardEditor 쪽 날짜/상태 검증 비대칭" 갭으로 적어뒀던 항목은 재검토 결과 실제 버그가 아니었음 — `CardEditor`의 날짜 입력은 `<input type="date">`, 상태는 `<select>`라 브라우저가 이미 유효한 형식/값만 만들어냄. 문서에서 제거함.
 
 ## 6. 결정이 필요한 열린 질문
 
