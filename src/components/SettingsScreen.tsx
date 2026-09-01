@@ -1,6 +1,7 @@
 import { useWorkspaceStore } from '../store/workspaceStore';
 import type { AutonomyMode } from '../types/workspace';
 import ResetDemoButton from './ResetDemoButton';
+import { ContextScopeList } from './workspace/ContextScope';
 import { useLanguageStore, useTranslation, type Language, type TranslationKey } from '../i18n';
 
 const TOOLS = [
@@ -100,14 +101,7 @@ export default function SettingsScreen() {
         </Card>
 
         <Card title={t('contextTitle')}>
-          <div className="flex flex-col gap-1.5">
-            {([t('contextCurrentFocus'), t('contextWorkspaceState'), t('dependencies')]).map((label) => (
-              <div key={label} className="flex items-center gap-2 text-sm text-text-primary">
-                <span className="text-green-600">✓</span>
-                {label}
-              </div>
-            ))}
-          </div>
+          <ContextScopeList />
         </Card>
 
         <Card title={t('restrictedTitle')}>

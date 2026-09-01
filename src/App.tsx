@@ -42,7 +42,7 @@ function TopBar({ screen }: { screen: ScreenId }) {
   const autonomyMode = useWorkspaceStore((state) => state.autonomyMode);
   const setAutonomyMode = useWorkspaceStore((state) => state.setAutonomyMode);
   const { t } = useTranslation();
-  const heading = screen === 'workspace' ? title : screen === 'activity' ? `3. ${t('activity')}` : screen === 'settings' ? `4. ${t('settings')} / WebMCP` : t('dashboard');
+  const heading = screen === 'workspace' ? title : screen === 'activity' ? t('activity') : screen === 'settings' ? `${t('settings')} / WebMCP` : t('dashboard');
   const subtitle = screen === 'activity' ? t('activitySubtitle') : screen === 'settings' ? t('settingsSubtitle') : screen === 'workspace' ? t('workspaceSubtitle') : t('dashboardSubtitle');
 
   return (
@@ -59,13 +59,11 @@ function TopBar({ screen }: { screen: ScreenId }) {
           <span className={`w-2 h-2 rounded-full ${webmcpAvailable ? 'bg-emerald-500' : 'bg-slate-400'}`} />
           WebMCP <span className={webmcpAvailable ? 'text-emerald-600' : 'text-text-tertiary'}>{webmcpAvailable ? t('connected') : t('unavailable')}</span>
         </span>
-        {screen === 'workspace' && (
-          <select value={autonomyMode} onChange={(event) => setAutonomyMode(event.target.value as typeof autonomyMode)} className="border border-border rounded-lg bg-white px-3 py-2 text-xs font-medium">
-            <option value="observe">{t('observeMode')}</option>
-            <option value="assist">{t('assistMode')}</option>
-            <option value="autonomous">{t('autonomousMode')}</option>
-          </select>
-        )}
+        <select value={autonomyMode} onChange={(event) => setAutonomyMode(event.target.value as typeof autonomyMode)} className="border border-border rounded-lg bg-white px-3 py-2 text-xs font-medium">
+          <option value="observe">{t('observeMode')}</option>
+          <option value="assist">{t('assistMode')}</option>
+          <option value="autonomous">{t('autonomousMode')}</option>
+        </select>
         <ResetDemoButton />
       </div>
     </div>
