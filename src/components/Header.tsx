@@ -1,9 +1,16 @@
+import { useState } from 'react';
 import { useWorkspaceStore } from '../store/workspaceStore';
 
 export default function Header() {
   const title = useWorkspaceStore((s) => s.title);
   const webmcpAvailable = useWorkspaceStore((s) => s.webmcpAvailable);
   const resetWorkspace = useWorkspaceStore((s) => s.resetWorkspace);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+
+  const handleReset = () => {
+    resetWorkspace();
+    setConfirmOpen(false);
+  };
 
   return (
     <header className="bg-surface border-b border-border px-6 py-4 flex items-center justify-between">
@@ -27,11 +34,11 @@ export default function Header() {
 
       <div className="flex items-center gap-4">
         <button
-          onClick={resetWorkspace}
+          onClick={() => setConfirmOpen(true)}
           className="text-xs text-text-tertiary hover:text-text-secondary transition-colors px-2 py-1 rounded hover:bg-surface-secondary"
           title="Reset to demo data"
         >
-          Reset
+          Reset Demo
         </button>
         <div className="flex items-center gap-2">
           <div
@@ -49,6 +56,37 @@ export default function Header() {
           <span className="text-xs font-medium text-agent">Agent</span>
         </div>
       </div>
+
+      {confirmOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-[2px] animate-fade-in"
+          onClick={() => setConfirmOpen(false)}
+        >
+          <div
+            className="bg-surface rounded-xl border border-border shadow-xl w-full max-w-sm p-6 animate-slide-in"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="text-sm font-semibold text-text-primary mb-1">Reset demo workspace?</h2>
+            <p className="text-xs text-text-secondary mb-4">
+              This clears every card, lock, and activity entry back to the starting demo state.
+            </p>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setConfirmOpen(false)}
+                className="px-4 py-2 text-sm text-text-secondary hover:text-text-primary transition-colors rounded-lg hover:bg-surface-secondary"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleReset}
+                className="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors"
+              >
+                Reset
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </header>
   );
 }

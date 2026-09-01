@@ -40,7 +40,7 @@ interface WorkspaceState {
   getWorkspace: () => { id: string; title: string; items: PlanItem[]; selectedItemId: string | null; updatedAt: string };
   getSelectedItem: () => PlanItem | null;
   getIncompleteDependencies: (id: string) => PlanItem[];
-  addActivityLog: (action: string, detail: string) => void;
+  addActivityLog: (entry: Omit<ActivityLogEntry, 'id' | 'timestamp'>) => void;
   setWebmcpAvailable: (available: boolean) => void;
   resetWorkspace: () => void;
 }
@@ -144,6 +144,10 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           return { success: false, reason: 'ITEM_NOT_FOUND' };
         }
 
+        if (item.locked && actor === 'agent') {
+          return { success: false, reason: 'ITEM_LOCKED_BY_HUMAN' };
+        }
+
         if (newStatus === 'done') {
           const incomplete = getIncompleteDependencies(item, state.items);
           if (incomplete.length > 0) {
@@ -228,7 +232,12 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           updatedAt: now,
         }));
 
-        get().addActivityLog('Reverted', `"${item.title}" — agent's last change undone`);
+        get().addActivityLog({
+          source: 'human',
+          action: 'Reverted',
+          detail: `"${item.title}" — agent's last change undone`,
+          status: 'success',
+        });
 
         return { success: true };
       },
@@ -257,15 +266,14 @@ export const useWorkspaceStore = create<WorkspaceState>()(
         return getIncompleteDependencies(item, state.items);
       },
 
-      addActivityLog: (action, detail) => {
-        const entry: ActivityLogEntry = {
-          id: `log_${Date.now()}`,
-          action,
-          detail,
+      addActivityLog: (entry) => {
+        const fullEntry: ActivityLogEntry = {
+          id: crypto.randomUUID(),
           timestamp: new Date().toISOString(),
+          ...entry,
         };
         set((state) => ({
-          activityLog: [...state.activityLog.slice(-49), entry],
+          activityLog: [...state.activityLog.slice(-49), fullEntry],
         }));
       },
 

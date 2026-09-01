@@ -89,9 +89,14 @@ export default function Board() {
 
   const applyMove = (itemId: string, newStatus: ItemStatus) => {
     const result = moveItem(itemId, newStatus, 'human');
-    if (!result.success && result.reason === 'DEPENDENCIES_INCOMPLETE') {
+    if (!result.success) {
       const item = items.find((i) => i.id === itemId);
-      addActivityLog('Blocked', `"${item?.title}" can't move to Done — dependencies incomplete`);
+      addActivityLog({
+        source: 'human',
+        action: 'Blocked',
+        detail: `"${item?.title}"\n${result.reason}`,
+        status: 'blocked',
+      });
     }
   };
 

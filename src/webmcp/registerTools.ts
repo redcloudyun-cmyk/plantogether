@@ -1,4 +1,5 @@
 import { useWorkspaceStore } from '../store/workspaceStore';
+import type { ActivityStatus } from '../types/workspace';
 
 // Type declaration for the WebMCP API
 declare global {
@@ -26,8 +27,32 @@ const log = (toolName: string, ...args: unknown[]) => {
   console.log(`[WebMCP] ${toolName}`, ...args);
 };
 
+const REASON_MESSAGES: Record<string, string> = {
+  ITEM_NOT_FOUND: 'No item exists with that ID.',
+  ITEM_LOCKED_BY_HUMAN: 'This item is locked by the human and cannot be modified by the agent.',
+  ITEM_ID_REQUIRED: 'An itemId is required.',
+  TITLE_REQUIRED: 'A non-empty title is required.',
+  INVALID_STATUS: 'Status must be one of: backlog, planned, doing, done.',
+  INVALID_DATE_FORMAT: 'Date must be in YYYY-MM-DD format.',
+  DEPENDENCIES_INCOMPLETE: 'This item cannot be marked Done until its dependencies are Done.',
+};
+
 export async function registerWebMCPTools(): Promise<() => void> {
   const store = useWorkspaceStore;
+
+  const logActivity = (
+    toolName: string,
+    detail: string,
+    status: ActivityStatus = 'success'
+  ) => {
+    store.getState().addActivityLog({
+      source: 'webmcp',
+      toolName,
+      action: toolName,
+      detail,
+      status,
+    });
+  };
 
   if (!document.modelContext) {
     console.warn('[WebMCP] document.modelContext is not available. Tools will not be registered.');
@@ -58,7 +83,7 @@ export async function registerWebMCPTools(): Promise<() => void> {
         execute: async () => {
           log('get_workspace_state', 'Reading workspace state');
           const state = store.getState().getWorkspace();
-          store.getState().addActivityLog('Read workspace', `${state.items.length} items`);
+          logActivity('get_workspace_state', `${state.items.length} live items read`);
           return state;
         },
       },
@@ -72,7 +97,7 @@ export async function registerWebMCPTools(): Promise<() => void> {
         name: 'get_current_focus',
         title: 'Get Current Focus',
         description:
-          'Returns the planning item currently selected/focused by the human user. This tells you what the human is currently looking at or working on. Returns null if no item is selected.',
+          'Returns the planning item currently selected/focused by the human user. This tells you what the human is currently looking at or working on — use it to continue planning from the same live context the human has open, without asking them to re-explain it. Returns null if no item is selected.',
         annotations: { readOnlyHint: true },
         inputSchema: {
           type: 'object',
@@ -82,10 +107,7 @@ export async function registerWebMCPTools(): Promise<() => void> {
         execute: async () => {
           log('get_current_focus', 'Reading current focus');
           const item = store.getState().getSelectedItem();
-          store.getState().addActivityLog(
-            'Read current focus',
-            item ? `"${item.title}"` : 'None selected'
-          );
+          logActivity('get_current_focus', item ? item.title : 'None selected');
           return item || { selectedItem: null, message: 'No item is currently selected by the human.' };
         },
       },
@@ -146,18 +168,19 @@ export async function registerWebMCPTools(): Promise<() => void> {
           log('add_item', { title, status, owner, dueDate });
 
           if (!title || typeof title !== 'string' || !title.trim()) {
-            return { success: false, reason: 'TITLE_REQUIRED', message: 'A non-empty title is required.' };
+            logActivity('add_item', 'TITLE_REQUIRED', 'error');
+            return { success: false, reason: 'TITLE_REQUIRED', message: REASON_MESSAGES.TITLE_REQUIRED };
           }
 
-          // Validate status
           const validStatuses = ['backlog', 'planned', 'doing', 'done'];
           if (status && !validStatuses.includes(status)) {
-            return { success: false, reason: 'INVALID_STATUS', message: `Status must be one of: ${validStatuses.join(', ')}` };
+            logActivity('add_item', 'INVALID_STATUS', 'error');
+            return { success: false, reason: 'INVALID_STATUS', message: REASON_MESSAGES.INVALID_STATUS };
           }
 
-          // Validate date format
           if (dueDate && !/^\d{4}-\d{2}-\d{2}$/.test(dueDate)) {
-            return { success: false, reason: 'INVALID_DATE_FORMAT', message: 'Date must be in YYYY-MM-DD format' };
+            logActivity('add_item', 'INVALID_DATE_FORMAT', 'error');
+            return { success: false, reason: 'INVALID_DATE_FORMAT', message: REASON_MESSAGES.INVALID_DATE_FORMAT };
           }
 
           const newItem = store.getState().addItem(
@@ -172,7 +195,7 @@ export async function registerWebMCPTools(): Promise<() => void> {
             'agent'
           );
 
-          store.getState().addActivityLog('Added', `"${newItem.title}"`);
+          logActivity('add_item', newItem.title);
 
           return {
             success: true,
@@ -191,7 +214,7 @@ export async function registerWebMCPTools(): Promise<() => void> {
         name: 'update_item',
         title: 'Update Planning Item',
         description:
-          'Updates an existing planning item. You can change the title, description, status, owner, due date, or dependencies. Changes appear immediately on the board. Cannot modify items that are locked by the human user.',
+          'Updates an existing planning item. You can change the title, description, status, owner, due date, or dependencies. Changes appear immediately on the board. Cannot modify items that are locked by the human user — locking is a human-only action, so a locked item stays locked until the human unlocks it.',
         inputSchema: {
           type: 'object',
           properties: {
@@ -243,12 +266,13 @@ export async function registerWebMCPTools(): Promise<() => void> {
           log('update_item', { itemId, changes });
 
           if (!itemId) {
-            return { success: false, reason: 'ITEM_ID_REQUIRED' };
+            logActivity('update_item', 'ITEM_ID_REQUIRED', 'error');
+            return { success: false, reason: 'ITEM_ID_REQUIRED', message: REASON_MESSAGES.ITEM_ID_REQUIRED };
           }
 
-          // Validate date format if provided
           if (changes.dueDate && !/^\d{4}-\d{2}-\d{2}$/.test(changes.dueDate)) {
-            return { success: false, reason: 'INVALID_DATE_FORMAT', message: 'Date must be in YYYY-MM-DD format' };
+            logActivity('update_item', 'INVALID_DATE_FORMAT', 'error');
+            return { success: false, reason: 'INVALID_DATE_FORMAT', message: REASON_MESSAGES.INVALID_DATE_FORMAT };
           }
 
           const typedChanges = {
@@ -256,89 +280,57 @@ export async function registerWebMCPTools(): Promise<() => void> {
             status: changes.status as 'backlog' | 'planned' | 'doing' | 'done' | undefined,
           };
           const result = store.getState().updateItem(itemId, typedChanges, 'agent');
+          const item = store.getState().items.find((i) => i.id === itemId);
 
           if (result.success) {
             const changeDesc = Object.keys(changes).join(', ');
-            store.getState().addActivityLog('Updated', `"${result.item?.title}" (${changeDesc})`);
+            logActivity('update_item', `${result.item?.title} (${changeDesc})`);
             return result;
           }
 
           if (result.reason === 'DEPENDENCIES_INCOMPLETE') {
             const blockers = store.getState().getIncompleteDependencies(itemId);
-            const item = store.getState().items.find((i) => i.id === itemId);
-            store.getState().addActivityLog('Blocked', `"${item?.title}" can't move to Done — dependencies incomplete`);
+            logActivity('update_item', `${item?.title}\nDEPENDENCIES_INCOMPLETE`, 'blocked');
             return {
               ...result,
               message: `Cannot mark this item Done: it still depends on ${blockers.length} incomplete item(s): ${blockers.map((b) => b.title).join(', ')}.`,
             };
           }
 
-          return result;
+          if (result.reason === 'ITEM_LOCKED_BY_HUMAN') {
+            logActivity('update_item', `${item?.title}\nITEM_LOCKED_BY_HUMAN`, 'blocked');
+            return { ...result, message: REASON_MESSAGES.ITEM_LOCKED_BY_HUMAN };
+          }
+
+          logActivity('update_item', String(result.reason ?? 'UNKNOWN_ERROR'), 'error');
+          return { ...result, message: REASON_MESSAGES[result.reason ?? ''] ?? 'This update could not be applied.' };
         },
       },
       { signal }
     );
     console.log('[WebMCP] ✓ Registered: update_item');
 
-    // Tool 5: lock_item
+    // Tool 5: analyze_plan
     await document.modelContext.registerTool(
       {
-        name: 'lock_item',
-        title: 'Lock Planning Item',
+        name: 'analyze_plan',
+        title: 'Analyze Plan',
         description:
-          'Locks an item so that it cannot be modified by the agent. This is used when the human wants to protect an item from being changed during a rebalance or bulk update. Locked items show a lock icon on the board.',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            itemId: {
-              type: 'string',
-              description: 'The ID of the item to lock',
-            },
-          },
-          required: ['itemId'],
-          additionalProperties: false,
-        },
-        execute: async (args) => {
-          const { itemId } = args as { itemId: string };
-          log('lock_item', { itemId });
-
-          if (!itemId) {
-            return { success: false, reason: 'ITEM_ID_REQUIRED' };
-          }
-
-          const result = store.getState().lockItem(itemId);
-          if (result.success) {
-            const item = store.getState().items.find((i) => i.id === itemId);
-            store.getState().addActivityLog('Locked', `"${item?.title}"`);
-          }
-          return result;
-        },
-      },
-      { signal }
-    );
-    console.log('[WebMCP] ✓ Registered: lock_item');
-
-    // Tool 6: rebalance_plan
-    await document.modelContext.registerTool(
-      {
-        name: 'rebalance_plan',
-        title: 'Rebalance Plan',
-        description:
-          'Reads the current workspace state and returns a structured analysis of the plan. This includes all items grouped by status, locked items that must not be changed, identified dependencies, and suggested schedule adjustments. Use this as a starting point, then use update_item to apply the individual changes. Locked items must be respected and should not be modified.',
+          'Reads the current workspace state (read-only) and returns a structured analysis of the plan: all items grouped by status, locked items that must not be changed, dependency relationships, and which items are currently blocked. Use this as a starting point, then call update_item individually for each change. Locked items must be respected and should not be modified.',
         annotations: { readOnlyHint: true },
         inputSchema: {
           type: 'object',
           properties: {
             constraints: {
               type: 'string',
-              description: 'Optional constraints or priorities to consider during rebalancing',
+              description: 'Optional constraints or priorities to consider during analysis',
             },
           },
           additionalProperties: false,
         },
         execute: async (args) => {
           const { constraints } = (args || {}) as { constraints?: string };
-          log('rebalance_plan', { constraints });
+          log('analyze_plan', { constraints });
 
           const state = store.getState().getWorkspace();
           const lockedItems = state.items.filter((i) => i.locked);
@@ -384,17 +376,22 @@ export async function registerWebMCPTools(): Promise<() => void> {
               'Review the items above. Respect all locked items. Use update_item to adjust dates, statuses, and dependencies for unlocked items as needed to create a balanced plan.',
           };
 
-          store.getState().addActivityLog('Analyzed plan', `${state.items.length} items, ${lockedItems.length} locked`);
+          logActivity('analyze_plan', `${state.items.length} items, ${lockedItems.length} locked`);
 
           return analysis;
         },
       },
       { signal }
     );
-    console.log('[WebMCP] ✓ Registered: rebalance_plan');
+    console.log('[WebMCP] ✓ Registered: analyze_plan');
 
-    console.log('[WebMCP] All 6 tools registered successfully.');
-    store.getState().addActivityLog('WebMCP', '6 tools registered');
+    console.log('[WebMCP] All 5 tools registered successfully.');
+    store.getState().addActivityLog({
+      source: 'system',
+      action: 'WebMCP',
+      detail: '5 tools registered',
+      status: 'success',
+    });
 
   } catch (error) {
     console.error('[WebMCP] Error registering tools:', error);

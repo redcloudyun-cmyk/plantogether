@@ -1,107 +1,1037 @@
-# PlanTogether 개발 계획
+# PlanTogether — WebMCP Challenge 개발 실행 계획
 
-> Human + Agent가 함께 계획을 짜는 협업 Kanban 워크스페이스.
-> 브라우저 내장 WebMCP(`document.modelContext`)를 통해 AI 에이전트가 사람과 같은 보드를 직접 조작한다.
-
-마지막 갱신: 2026-09-01
-기준: 현재 저장소 코드 상태 (`src/` 전체 스캔, git 이력 없음 — 로컬 전용 프로젝트)
-
-> **진행 상황**: Phase 5(의존성 시각화 & 검증), Phase 6(신뢰 경계 — 되돌리기), Phase 8 일부(테스트 + CI) 구현 완료. Phase 7(실시간 협업 확장)과 Phase 8의 배포 결정은 아직 남아있음.
->
-> **저장소**: https://github.com/redcloudyun-cmyk/plantogether (public), 기본 브랜치 `main`.
+**Version:** 1.1
+**Target:** OpenAI × Devpost WebMCP Challenge
+**Repository:** `redcloudyun-cmyk/plantogether`
+**Primary Branch:** `main`
+**Development Priority:** 완성 가능성이 높은 작은 MVP
+**Core Concept:** Live Human-Agent Collaborative Workspace
+**Brand:** WithGex (`logo/withgex logo.png`)
 
 ---
 
-## 1. 프로젝트 개요
+## 0. 현재 개발 상태
 
-- **컨셉**: 사람이 쓰는 Kanban 보드를 AI 에이전트도 동일하게 읽고 쓸 수 있게 만들어, "같은 화면을 보며 함께 계획을 조정하는" 경험을 데모한다.
-- **핵심 차별점**: 별도 채팅창이 아니라 **보드 자체가 공유 상태**다. 에이전트가 카드를 추가/수정하면 사람이 보는 화면에 실시간으로 반영되고, 누가 마지막으로 바꿨는지(`human` / `agent`) 카드에 표시된다.
-- **락(lock) 메커니즘**: 사람이 특정 카드를 잠그면 에이전트는 그 카드를 수정할 수 없다 — 신뢰 경계를 UI로 표현.
+PlanTogether는 기본 MVP 구현이 완료된 상태입니다.
 
-## 2. 기술 스택
+이미 구현된 핵심 기능:
 
-| 영역 | 선택 | 비고 |
-|---|---|---|
-| 프레임워크 | React 19 + Vite 8 + TypeScript | |
-| 상태관리 | Zustand 5 (`persist` 미들웨어, localStorage) | 새로고침해도 보드 유지 |
-| 드래그앤드롭 | @dnd-kit/core, /sortable, /utilities | 컬럼 간 이동 + 정렬 |
-| 스타일 | Tailwind CSS 4 (`@tailwindcss/vite`) | `index.css`의 `@theme`로 디자인 토큰 정의 |
-| Agent 연동 | WebMCP (`document.modelContext.registerTool`) | Chrome 149+ 실험 플래그 필요 |
-| 린트 | oxlint | |
+- React + TypeScript + Vite
+- Zustand 기반 단일 Workspace State
+- 4-Column Kanban Board
+- 카드 생성 / 수정
+- Drag & Drop
+- 카드 선택 / Current Focus
+- Human / Agent actor 구분
+- Human Lock
+- Dependency Blocking
+- Agent 변경 Highlight
+- Agent 변경분 개별 Revert
+- Agent Activity Log
+- WebMCP `document.modelContext.registerTool(...)`
+- WebMCP 기반 workspace read/write
+- localStorage persistence
+- WebMCP 미지원 브라우저 fallback
 
-## 3. 현재까지 구현된 것 (완료)
+현재 단계부터는 대규모 신규 기능을 추가하지 않습니다.
 
-### Phase 1 — 데이터 모델 & 스토어
-- `src/types/workspace.ts`: `PlanItem`(상태 4단계: backlog/planned/doing/done), `ActivityLogEntry`, `Workspace` 타입 정의.
-- `src/store/workspaceStore.ts`: `addItem`, `updateItem`, `moveItem`, `lockItem`/`unlockItem`, `selectItem`, `getWorkspace`, `getSelectedItem`, `addActivityLog` 구현. `persist`로 localStorage 저장.
-- `src/data/demoWorkspace.ts`: 데모용 초기 아이템 5개.
+목표는 다음 3가지입니다.
 
-### Phase 2 — Kanban 보드 UI
-- `src/components/Board.tsx`: dnd-kit `DndContext`로 4개 컬럼 간 드래그앤드롭. `DragOverlay`로 드래그 중 카드 미리보기.
-- `src/components/Column.tsx`: 컬럼별 헤더(개수 뱃지, `+` 추가 버튼), `useDroppable`.
-- `src/components/PlanCard.tsx`: 카드 UI — 마감일/담당자 뱃지, human/agent 배지, lock 토글 버튼, agent가 방금 수정한 카드에 하이라이트 애니메이션(`animate-agent-highlight`).
-- `src/components/CardEditor.tsx`: 모달 폼으로 카드 생성/수정 (제목/설명/담당자/마감일/상태).
+> **1. WebMCP가 왜 필요한지 명확하게 보이게 한다.**
+> **2. Human-Agent 협업의 차별점을 첫 화면과 데모에서 바로 이해하게 한다.**
+> **3. 제출 필수요건과 데모 완성도를 완성한다.**
 
-### Phase 3 — WebMCP 에이전트 연동
-- `src/webmcp/registerTools.ts`: 6개 도구 등록
-  1. `get_workspace_state` (읽기) — 보드 전체 상태
-  2. `get_current_focus` (읽기) — 사람이 현재 선택한 카드
-  3. `add_item` — 카드 생성 (입력 검증 포함: 제목 필수, 상태 enum, 날짜 포맷)
-  4. `update_item` — 카드 수정 (락 체크: 잠긴 카드는 agent가 수정 불가)
-  5. `lock_item` — 카드 잠금
-  6. `rebalance_plan` (읽기) — 락/의존성 상태를 구조화해 반환, 에이전트가 재계획 시작점으로 사용
-- `App.tsx`에서 마운트 시 등록, 언마운트 시 `AbortController`로 해제.
-- `AgentActivity.tsx` + `StatusBar.tsx`: 에이전트 행동 로그(최근 50개)와 WebMCP 연결 상태 표시.
+---
 
-### Phase 4 — 마무리 폴리시
-- `Header.tsx`: 브랜딩, WebMCP 연결 인디케이터, Reset 버튼.
-- `index.css`: 디자인 토큰, 하이라이트/슬라이드인 애니메이션.
-- 프로덕션 빌드 확인됨 (`dist/` 존재).
+# 1. 프로젝트 목표
 
-## 4. 알려진 갭 (다음에 다뤄야 할 것)
+PlanTogether는 사람이 웹 화면에서 직접 작업하고, AI Agent가 **동일한 작업 상태를 WebMCP Tool을 통해 읽고 쓰며 화면을 공유 작업하는 협업 Planning Board**입니다.
 
-- ~~`dependencies` 필드가 데이터에만 존재하고 시각화되지 않음~~ — **해결됨 (Phase 5)**, 섹션 5.1 참고.
-- ~~`unlock_item`이 store에는 있지만 WebMCP 도구로 노출되지 않음~~ — **결정됨 (Phase 6)**: 의도적으로 노출하지 않음. 사람이 건 락을 에이전트가 스스로 풀 수 있으면 락 기능 자체의 신뢰 경계가 무의미해지므로, 락 해제는 계속 사람 전용으로 유지. 섹션 5.2 참고.
-- **`get_current_focus` / `rebalance_plan`을 제외하면 실시간 다중 에이전트·다중 사용자 동기화가 없음** — 지금은 단일 브라우저 탭 + localStorage뿐이라 "함께 계획한다"는 컨셉이 실제로는 한 사람 + 한 에이전트로 국한됨.
-- ~~테스트 없음~~ — **해소됨 (Phase 8 일부)**: 스토어 단위 테스트 + 핵심 컴포넌트 테스트 추가, 섹션 5.4 참고. WebMCP 도구(`registerTools.ts`) 자체에 대한 테스트는 아직 없음 (실제 `document.modelContext` 없이 단위 테스트하기 까다로움 — 남은 과제).
-- **`Board.tsx`의 `handleDragOver`가 빈 함수** — 컬럼 간 드래그 중 실시간 미리보기 이동이 없어 드롭 전까지 카드가 원래 컬럼에 남아있음 (기능은 하지만 UX 개선 여지).
+일반 AI 챗봇처럼 사용자가 정보를 복사해서 AI에게 전달하거나, AI가 별도 서버 데이터만 조회하는 방식이 아닙니다.
 
-## 5. 다음 단계 로드맵
+핵심:
 
-### Phase 5 — 의존성 시각화 & 검증 ✅ 완료 (2026-09-01)
-- `PlanCard.tsx`: 의존성이 `done`이 아닌 카드에 "⛔ Blocked by N" 배지 표시 (호버 시 어떤 카드에 막혀있는지 툴팁).
-- `workspaceStore.ts`: `moveItem`/`updateItem`이 `done`으로 전환 시 미완료 의존성이 있으면 `{ success: false, reason: 'DEPENDENCIES_INCOMPLETE' }`를 반환하고 상태 변경을 거부. 새 셀렉터 `getIncompleteDependencies(id)` 추가.
-- `Board.tsx`: 드래그로 Done에 놓아도 막히면 원래 컬럼에 남고, Agent Activity 로그에 "Blocked ..." 항목이 남음.
-- `CardEditor.tsx`: 사람이 폼에서 상태를 Done으로 바꿔도 동일하게 막히고 인라인 경고 메시지 표시.
-- `registerTools.ts`: `update_item` 실패 시 에이전트에게 어떤 카드에 막혀있는지 알려주는 `message` 포함. `rebalance_plan`이 `modifiableItems[].blockedBy`와 최상위 `blockedItems[]`로 의존성 그래프를 명시적으로 반환.
-- 검증: Playwright로 헤드리스 브라우저에서 실제 드래그앤드롭 시나리오 확인 완료 (배지 렌더링, 드롭 거부, 활동 로그 메시지 모두 정상).
+> **Human and Agent work on the same live workspace.**
 
-### Phase 6 — 신뢰 경계 강화 ✅ 완료 (2026-09-01)
-- **결정**: `unlock_item`은 WebMCP 도구로 노출하지 않는다 (에이전트가 스스로 락 해제 불가). 사람만 락을 걸고 풀 수 있어야 "락"이 실제 신뢰 경계로 기능한다.
-- **"되돌리기" 안전망 구현**: `PlanItem.previousState`에 에이전트의 직전 변경 전 스냅샷(제목/설명/상태/담당자/마감일)을 저장. `updateItem`이 `actor === 'agent'`로 성공할 때마다 갱신되고, 사람이 수정하면 초기화됨.
-  - `workspaceStore.ts`: `revertItem(id)` 액션 추가 — 스냅샷으로 복원하고 `updatedBy: 'human'`으로 기록, 활동 로그에 "Reverted" 항목 남김.
-  - `PlanCard.tsx`: 에이전트가 마지막으로 수정한 카드에 "↩ Revert" 버튼 표시 (사람만 볼 수 있고 누를 수 있음 — 에이전트에게는 WebMCP 도구로 노출되지 않음).
-  - 검증: Playwright로 에이전트가 수정한 카드 → Revert 클릭 → 제목/상태 원복 + 활동 로그 확인, 정상 동작 확인.
-- **보류(다음 후보)**: 대량 변경(예: `rebalance_plan` 이후 여러 `update_item` 연속 호출) 전체를 한 번에 승인/취소하는 "제안 미리보기" 흐름은 아직 없음 — 지금은 카드 단위 되돌리기만 가능. 필요성이 커지면 별도 Phase로 분리.
+사람이 직접 수정한 작업 화면 상태를 Agent가 즉시 이해하고, Agent가 작업한 결과는 같은 화면에 즉시 반영됩니다.
 
-### Phase 7 — 실시간 협업 확장
-- localStorage → 서버 기반 동기화(WebSocket 또는 CRDT)로 전환해 실제로 여러 탭/기기에서 "함께" 볼 수 있게.
-- 여러 워크스페이스 지원 (`Workspace.id`는 이미 있으나 UI에서 전환 불가).
+---
 
-### Phase 8 — 품질 & 배포 🟡 일부 완료 (2026-09-01)
-- ✅ Vitest + React Testing Library 도입 (`vite.config.ts`의 `test` 설정, `src/test/setup.ts`).
-  - `src/store/workspaceStore.test.ts`: `addItem`/`updateItem`/`moveItem`/`revertItem`/`lockItem`·`unlockItem` — 락 검증, 의존성 차단, 되돌리기 스냅샷 로직 등 14개 테스트.
-  - `src/components/PlanCard.test.tsx`: Blocked 배지 표시/숨김, Revert 버튼 클릭 시 실제 상태 복원까지 검증.
-  - `npm test`(1회 실행) / `npm run test:watch` 스크립트 추가.
-- ✅ GitHub Actions CI (`.github/workflows/ci.yml`): main 브랜치 push/PR마다 `npm ci` → `lint` → `tsc -b` → `test` → `build` 순서로 실행.
-- ⬜ `registerTools.ts`의 WebMCP 도구 자체 테스트 (mock `document.modelContext`로 등록/실행 검증) — 아직 없음.
-- ⬜ 배포 타겟 결정 및 실제 배포 (Vercel/Netlify 등) — 아직 미정, 섹션 6 참고.
-- 검증: `npx tsc -b`, `npx oxlint`, `npx vitest run` 모두 통과 확인.
+# 2. 핵심 메시지
 
-> 참고: 애초 "CardEditor 쪽 날짜/상태 검증 비대칭" 갭으로 적어뒀던 항목은 재검토 결과 실제 버그가 아니었음 — `CardEditor`의 날짜 입력은 `<input type="date">`, 상태는 `<select>`라 브라우저가 이미 유효한 형식/값만 만들어냄. 문서에서 제거함.
+PlanTogether의 메시지는 단순한 "AI Kanban"이 아닙니다.
 
-## 6. 결정이 필요한 열린 질문
+핵심 메시지:
 
-1. 이 프로젝트가 데모/포트폴리오용인지, 실제 다중 사용자 제품으로 확장할지에 따라 Phase 7의 우선순위가 크게 달라짐.
-2. ~~에이전트의 자율성 범위 — 락 해제~~는 Phase 6에서 "사람 전용"으로 결정됨. 남은 질문: 대량 수정(여러 카드 연속 변경)까지 사람 승인 없이 허용할지 — 지금은 카드 단위 되돌리기로 완화만 해둔 상태.
-3. 다중 워크스페이스가 필요한 시점 (지금은 단일 워크스페이스로 충분한지).
+> **The human and agent continuously adapt the same live plan — while human intent remains authoritative.**
+
+또는:
+
+> **Not human or agent. Human with agent.**
+
+서비스 Tagline:
+
+> **Plan together. Human and agent.**
+
+---
+
+# 3. 이번 버전의 우선 개발 목표
+
+추가 개발은 원칙적으로 **3개 기능만 필수**로 한다.
+
+## MUST-01 — Live Human Context / Handoff
+
+현재 `get_current_focus` 기능을 UI와 Agent Activity에서 더 명확하게 보여준다.
+
+사람이 지금 선택한 카드를 Agent가 별도 설명 없이 그대로 이어받을 수 있어야 한다.
+
+UI 예시:
+
+```text
+┌────────────────────────────────────┐
+│ LIVE HUMAN CONTEXT                 │
+│                                    │
+│ Selected                           │
+│ Design landing page                │
+│                                    │
+│ Status       Planned               │
+│ Due          Sep 5                 │
+│ Owner        Mina                  │
+│                                    │
+│ ✓ Shared with Agent                │
+└────────────────────────────────────┘
+```
+
+사용자가 다른 카드를 선택하면 즉시 변경된다.
+
+Agent가 `get_current_focus`를 호출하면 Activity에는 다음과 같이 표시한다.
+
+```text
+→ get_current_focus
+  Design landing page
+```
+
+### 목적
+
+이 기능은 PlanTogether의 핵심 차별점을 보여준다.
+
+> Agent가 단순히 프로젝트 데이터를 읽는 것이 아니라,
+> **사람이 지금 작업 중인 live context를 그대로 이어받는다.**
+
+---
+
+## MUST-02 — Demo Reset + Strong Demo Dataset
+
+현재 Store의 `resetWorkspace()`를 실제 UI에서 사용할 수 있게 한다.
+
+Header에:
+
+```text
+Reset Demo
+```
+
+버튼을 추가한다.
+
+동작:
+
+```text
+Reset demo workspace?
+
+[Cancel] [Reset]
+```
+
+Reset 시:
+
+- Demo Workspace 초기화
+- Activity Log 초기화
+- Selected Item 초기화
+- Agent Highlight 제거
+- localStorage는 동일한 초기 상태로 갱신
+
+### Demo Dataset 변경
+
+기존 Demo Dataset은 lock과 dependency가 첫 화면에서 보이지 않는다.
+
+초기 상태를 다음처럼 바꾼다.
+
+```text
+BACKLOG
+────────────────
+Submit to Devpost
+⛔ Blocked by 1
+
+
+PLANNED
+────────────────
+Build WebMCP tools 🔒
+Sep 2
+
+Record demo
+Sep 3
+⛔ Blocked by 1
+
+
+DOING
+────────────────
+Polish board UI
+Sep 2
+
+
+DONE
+────────────────
+Define MVP
+```
+
+Dependencies:
+
+```text
+Record demo
+  → depends on
+Build WebMCP tools
+
+Submit to Devpost
+  → depends on
+Record demo
+```
+
+Locked:
+
+```text
+Build WebMCP tools
+locked: true
+```
+
+### 목적
+
+사이트 첫 진입만으로 다음이 보여야 한다.
+
+- Human Lock
+- Dependency
+- Blocked State
+- Live Workspace
+- Human Intent
+
+---
+
+## MUST-03 — WebMCP Live Activity Trace
+
+기존 `Agent Activity`를 데모용으로 강화한다.
+
+패널 이름:
+
+```text
+WebMCP Live Activity
+```
+
+Tool 이름을 실제로 노출한다.
+
+예:
+
+```text
+WEBMCP LIVE ACTIVITY
+
+12:41:03
+→ get_current_focus
+  Design landing page
+
+12:41:04
+→ get_workspace_state
+  5 live items read
+
+12:41:06
+✦ add_item
+  Record demo
+
+12:41:07
+✦ update_item
+  QA → Sep 3
+
+12:41:09
+✗ update_item
+  Build WebMCP tools
+  ITEM_LOCKED_BY_HUMAN
+```
+
+Activity Entry 데이터 모델은 다음 형태를 권장한다.
+
+```typescript
+interface ActivityLogEntry {
+  id: string;
+  timestamp: string;
+  source: 'webmcp' | 'human' | 'system';
+  toolName?: string;
+  action: string;
+  detail: string;
+  status?: 'success' | 'blocked' | 'error';
+}
+```
+
+### 목적
+
+심사위원이 영상만 보고도:
+
+> "이 앱은 실제 WebMCP Tool을 호출하고 있다."
+
+는 사실을 이해하도록 한다.
+
+---
+
+# 4. WebMCP Tool 재정리
+
+기존 6개 Tool을 무조건 유지할 필요는 없다.
+
+추천 최종 Tool:
+
+```text
+get_workspace_state
+get_current_focus
+add_item
+update_item
+analyze_plan
+```
+
+---
+
+## 4.1 `lock_item` 제거 권장
+
+현재 Human Lock은 UI에서 사람이 직접 설정할 수 있다.
+
+Agent가 스스로 `lock_item`을 호출하는 구조는 핵심 메시지를 약하게 만든다.
+
+PlanTogether의 Lock 철학:
+
+```text
+Human establishes constraints.
+Agent works within them.
+```
+
+따라서:
+
+### Human
+
+```text
+🔒 Lock
+```
+
+### Agent
+
+```text
+update_item
+```
+
+Agent가 Locked Item을 수정하면:
+
+```json
+{
+  "success": false,
+  "reason": "ITEM_LOCKED_BY_HUMAN"
+}
+```
+
+이 구조를 유지한다.
+
+---
+
+## 4.2 `rebalance_plan` → `analyze_plan` 변경 권장
+
+현재 `rebalance_plan`은 실제 mutation이 아니라 read-only analysis Tool이다.
+
+따라서 Tool 이름을:
+
+```text
+rebalance_plan
+```
+
+에서:
+
+```text
+analyze_plan
+```
+
+으로 변경하는 것이 정확하다.
+
+Agent Flow:
+
+```text
+analyze_plan
+      ↓
+update_item
+      ↓
+update_item
+      ↓
+update_item
+```
+
+이 방식은 WebMCP Tool orchestration을 더 명확하게 보여준다.
+
+---
+
+# 5. WebMCP 핵심 구조
+
+```text
+                    HUMAN
+                      │
+        select / drag / edit / lock
+                      │
+                      ▼
+            LIVE WORKSPACE STATE
+                      │
+            document.modelContext
+                      │
+                      ▼
+                    AGENT
+                      │
+        ┌─────────────┼──────────────┐
+        ▼             ▼              ▼
+     READ          CREATE          UPDATE
+     context        work            plan
+        │             │              │
+        └─────────────┼──────────────┘
+                      ▼
+              SAME LIVE BOARD
+                      │
+         Human sees changes instantly
+                      │
+               ┌───────┴───────┐
+               ▼               ▼
+             LOCK            REVERT
+               │               │
+               └────── HUMAN ──┘
+```
+
+---
+
+# 6. 핵심 WebMCP Tools
+
+## Tool 1 — `get_workspace_state`
+
+전체 live workspace를 읽는다.
+
+반환:
+
+```json
+{
+  "workspaceTitle": "Launch PlanTogether",
+  "items": [],
+  "selectedItemId": "item_3"
+}
+```
+
+용도:
+
+- 전체 계획 파악
+- Dependency 분석
+- 변경 전 최신 상태 확인
+
+---
+
+## Tool 2 — `get_current_focus`
+
+현재 Human이 선택한 Item을 반환한다.
+
+```json
+{
+  "id": "task_01",
+  "title": "Design landing page",
+  "status": "planned",
+  "dueDate": "2026-09-05",
+  "owner": "Mina"
+}
+```
+
+이 Tool은 PlanTogether의 핵심 WebMCP 차별점이다.
+
+---
+
+## Tool 3 — `add_item`
+
+Agent가 Planning Item을 추가한다.
+
+```json
+{
+  "title": "Record demo",
+  "status": "planned",
+  "dueDate": "2026-09-03"
+}
+```
+
+---
+
+## Tool 4 — `update_item`
+
+Agent가 기존 Item을 수정한다.
+
+```json
+{
+  "itemId": "task_03",
+  "dueDate": "2026-09-04"
+}
+```
+
+Locked Item은 수정 불가.
+
+---
+
+## Tool 5 — `analyze_plan`
+
+현재 Workspace를 read-only로 분석한다.
+
+반환 정보:
+
+- 전체 Item
+- Status별 Item
+- Locked Items
+- Dependencies
+- Blocked Items
+- Modifiable Items
+- 사용자 Constraints
+
+Agent는 결과를 보고 `update_item`을 개별 호출한다.
+
+---
+
+# 7. WebMCP 구현 원칙
+
+반드시 실제 API를 사용한다.
+
+```typescript
+document.modelContext.registerTool(...)
+```
+
+Mock WebMCP 금지.
+
+Tool registration 실패 시 앱 자체는 정상 동작해야 한다.
+
+```typescript
+if (!document.modelContext) {
+  showWebMcpUnsupported();
+}
+```
+
+Tool 호출 때문에 Page Refresh가 발생하면 안 된다.
+
+UI와 WebMCP는 반드시 동일한 Zustand Store를 사용한다.
+
+---
+
+# 8. State Safety
+
+현재 설계 중 반드시 유지할 기능:
+
+## Human Lock
+
+Agent는 Locked Item을 수정할 수 없다.
+
+```typescript
+if (item.locked && actor === 'agent') {
+  return {
+    success: false,
+    reason: 'ITEM_LOCKED_BY_HUMAN'
+  };
+}
+```
+
+---
+
+## Dependency Blocking
+
+미완료 Dependency가 있는 Item을 Done으로 변경하지 못한다.
+
+```text
+⛔ Blocked by 2
+```
+
+---
+
+## Agent Revert
+
+Agent가 Item을 변경하면 이전 상태를 snapshot으로 보관한다.
+
+Human UI에서:
+
+```text
+↩ Revert
+```
+
+가능해야 한다.
+
+원칙:
+
+> Agent changes are immediately visible and independently reversible by the human.
+
+이 문구는 README의 제출 설명에 포함한다.
+
+---
+
+# 9. Store Consistency 개선
+
+## `moveItem` Lock Check 추가
+
+현재 Agent가 직접 `moveItem`을 호출하지 않더라도 Store API 일관성을 위해 다음 검사를 추가한다.
+
+```typescript
+if (item.locked && actor === 'agent') {
+  return {
+    success: false,
+    reason: 'ITEM_LOCKED_BY_HUMAN'
+  };
+}
+```
+
+---
+
+## Activity Log ID 개선
+
+기존:
+
+```typescript
+id: `log_${Date.now()}`
+```
+
+보다:
+
+```typescript
+id: crypto.randomUUID()
+```
+
+권장.
+
+동일 millisecond Tool Call의 key 충돌을 예방한다.
+
+---
+
+# 10. Input Validation 정리
+
+`add_item`과 `update_item` validation 결과를 통일한다.
+
+공통 Error Shape:
+
+```json
+{
+  "success": false,
+  "reason": "INVALID_STATUS",
+  "message": "Status must be one of: backlog, planned, doing, done"
+}
+```
+
+처리 대상:
+
+```text
+TITLE_REQUIRED
+ITEM_ID_REQUIRED
+ITEM_NOT_FOUND
+INVALID_STATUS
+INVALID_DATE_FORMAT
+ITEM_LOCKED_BY_HUMAN
+DEPENDENCIES_INCOMPLETE
+```
+
+---
+
+# 11. UI 구성
+
+권장 화면:
+
+```text
+┌──────────────────────────────────────────────────────────────────────┐
+│ PlanTogether               Human + Agent              Reset Demo     │
+│ Plan together. Human and agent.                                      │
+├─────────────────────────────────────────────┬────────────────────────┤
+│                                              │ LIVE HUMAN CONTEXT     │
+│ Backlog | Planned | Doing | Done            │                        │
+│                                              │ Selected:              │
+│ [cards]                                     │ Design landing page    │
+│                                              │ Due: Sep 5             │
+│                                              │ Owner: Mina            │
+│                                              │ ✓ Shared with Agent    │
+│                                              ├────────────────────────┤
+│                                              │ WEBMCP LIVE ACTIVITY   │
+│                                              │ → get_current_focus    │
+│                                              │ ✦ add_item             │
+│                                              │ ✗ update_item          │
+├─────────────────────────────────────────────┴────────────────────────┤
+│ WebMCP status | items | done                                         │
+└────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+# 12. Demo Script
+
+전체 데모는 **약 90초**를 목표로 한다.
+
+## Scene 1 — Live Human Context
+
+Human이:
+
+```text
+Record demo
+```
+
+카드를 선택한다.
+
+Live Human Context가 즉시 변경된다.
+
+Agent 요청:
+
+```text
+Continue planning from what I'm working on.
+```
+
+Agent:
+
+```text
+get_current_focus
+get_workspace_state
+```
+
+---
+
+## Scene 2 — Agent Creates Work
+
+Agent:
+
+```text
+add_item
+```
+
+으로 필요한 Item 추가.
+
+Board에 즉시 표시.
+
+Activity:
+
+```text
+✦ add_item
+```
+
+---
+
+## Scene 3 — Human Override
+
+Human이 카드 Due Date 변경.
+
+다른 카드 하나를 Lock.
+
+---
+
+## Scene 4 — Agent Reconcile
+
+사용자:
+
+```text
+Rebalance the rest of the plan around my changes.
+```
+
+Agent:
+
+```text
+analyze_plan
+update_item
+update_item
+```
+
+Locked Item 수정 시도는 차단.
+
+```text
+✗ ITEM_LOCKED_BY_HUMAN
+```
+
+---
+
+## Scene 5 — Human Revert
+
+Agent가 변경한 카드 중 하나에서:
+
+```text
+↩ Revert
+```
+
+클릭.
+
+Human이 Agent 변경을 즉시 되돌린다.
+
+---
+
+## Closing
+
+Narration:
+
+```text
+The human doesn't hand work to the agent.
+
+They share the same live context,
+adapt the same plan,
+and the human stays authoritative.
+
+This is PlanTogether, built with WebMCP.
+```
+
+---
+
+# 13. Git Branch 이슈
+
+공식 개발 브랜치는:
+
+```text
+main
+```
+
+으로 통일한다. **완료됨 (2026-09-01)** — GitHub 기본 브랜치가 `main`으로 전환되었고, 로컬 저장소도 `origin/main`을 정상 추적 중이다.
+
+---
+
+# 14. Git Commit 권장 순서
+
+```text
+chore: rename default branch to main
+
+docs: add MIT license
+
+docs: replace vite readme with challenge documentation
+
+feat: add live human context panel
+
+feat: add demo reset workflow
+
+feat: strengthen challenge demo dataset
+
+refactor: simplify webmcp tool surface
+
+refactor: rename rebalance tool to analyze plan
+
+feat: expose webmcp live activity trace
+
+fix: enforce lock policy consistently in store
+
+fix: normalize webmcp validation responses
+
+feat: polish challenge demo experience
+
+chore: add deployment configuration
+```
+
+---
+
+# 15. 제출 필수요건
+
+## LICENSE
+
+Repository root:
+
+```text
+LICENSE
+```
+
+MIT License 추가.
+
+---
+
+## README
+
+기존 Vite 기본 README 제거.
+
+최종 README 구조:
+
+```text
+# PlanTogether
+
+## What it is
+
+## Why WebMCP
+
+## Live Demo
+
+## Human-Agent Collaboration
+
+## Live Human Context
+
+## WebMCP Tools
+
+## Human Control
+- Lock
+- Dependency Blocking
+- Revert
+
+## Architecture
+
+## Testing with WebMCP
+
+## Local Development
+
+## Challenge Demo Flow
+
+## License
+```
+
+---
+
+## Live Deployment
+
+반드시 Public Live URL 제공.
+
+우선순위:
+
+```text
+1. Vercel
+2. Cloudflare Pages
+3. Existing server
+```
+
+배포 후 반드시 실제 WebMCP 테스트 환경에서 E2E 확인한다.
+
+---
+
+# 16. README 핵심 설명
+
+README에는 아래 메시지를 반드시 포함한다.
+
+```text
+PlanTogether does not give an agent a separate copy of the plan.
+
+WebMCP exposes the same live workspace the human is actively editing.
+
+Human actions immediately become agent context,
+and agent actions immediately become visible human workspace changes.
+```
+
+그리고:
+
+```text
+Agent changes are immediately visible and independently reversible by the human.
+```
+
+---
+
+# 17. 하지 말아야 할 개발
+
+Challenge 제출 전 다음 기능을 추가하지 않는다.
+
+```text
+Authentication
+Database
+Backend API
+Multi Workspace
+Multi User
+WebSocket
+Comments
+Attachments
+Calendar
+Timeline
+Gantt
+Slack integration
+Google Calendar integration
+Notifications
+AI Chat UI
+External LLM API
+MCP Server
+RAG
+Vector DB
+Multi Agent
+```
+
+이 기능들에 대한 논의는 이후 Product Phase에서 검토한다.
+
+> 참고: 이전 버전 계획서(Phase 5-8)에서 제안했던 "실시간 다중 사용자 협업(WebSocket/CRDT)"은 이 목록에 의해 명시적으로 제외됨. 지금부터는 이 v1.1 계획서가 우선한다.
+
+---
+
+# 18. 개발 완료 기준
+
+## Core
+
+- [x] Human 카드 생성
+- [x] Human 카드 수정
+- [x] Drag & Drop
+- [x] Human Focus 선택
+- [x] Human Lock
+- [x] Dependency Blocking
+- [x] Agent Revert
+
+## WebMCP
+
+- [ ] `get_workspace_state`
+- [ ] `get_current_focus`
+- [ ] `add_item`
+- [ ] `update_item`
+- [ ] `analyze_plan` (rename from `rebalance_plan`)
+- [ ] `lock_item` 제거
+- [ ] Locked Item Agent 수정 차단
+- [ ] Tool execution refresh 없음
+
+## New Must-Have
+
+- [ ] Live Human Context 패널
+- [ ] Reset Demo
+- [ ] Strong Demo Dataset
+- [ ] WebMCP Live Activity Trace
+
+## Repository
+
+- [x] default branch = `main`
+- [ ] MIT LICENSE
+- [ ] Challenge README
+- [x] Public repository
+- [ ] Live deployment URL
+
+## Quality
+
+- [x] npm run build 통과
+- [x] npm run lint 통과
+- [x] Vitest 단위 테스트 (스토어 + 컴포넌트)
+- [ ] WebMCP actual browser E2E 통과
+- [ ] Demo reset 3회 연속 정상
+- [ ] 90초 Demo Scenario 연속 재현 가능
+
+---
+
+# 19. 최종 우선순위
+
+지금부터 작업 진행 기준:
+
+```text
+P0
+1. main branch 정리                 [완료]
+2. LICENSE
+3. README
+4. Live Deployment
+
+P1
+5. Live Human Context
+6. Reset Demo + Demo Dataset
+7. WebMCP Live Activity Trace
+
+P1 Refactor
+8. lock_item 제거
+9. rebalance_plan → analyze_plan
+
+P2
+10. moveItem lock consistency
+11. validation consistency
+12. activity log ID 개선
+
+P3
+13. UI polish
+14. Demo video
+15. Devpost submission
+```
+
+---
+
+# 20. FINAL PRODUCT PRINCIPLE
+
+PlanTogether는 Project Management SaaS를 만드는 프로젝트가 아니다.
+
+**WebMCP가 왜 필요한지를 가장 짧고 명확하게 보여주는 Human-Agent Collaborative Workspace를 만드는 프로젝트다.**
+
+성공 기준은 기능 수가 아니다.
+
+심사위원이 데모 영상을 보고 다음을 즉시 이해하면 성공이다.
+
+> 사람이 지금 보고 있는 작업을 Agent가 그대로 이어받고,
+> 같은 live workspace를 함께 수정하며,
+> 사람의 Lock과 Revert가 최종 권한으로 작동한다.
+
+즉:
+
+> **Same workspace. Same context. Human + Agent.**

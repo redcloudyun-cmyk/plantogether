@@ -26,11 +26,17 @@ export interface PlanItem {
   previousState?: RevertSnapshot;
 }
 
+export type ActivitySource = 'webmcp' | 'human' | 'system';
+export type ActivityStatus = 'success' | 'blocked' | 'error';
+
 export interface ActivityLogEntry {
   id: string;
+  timestamp: string;
+  source: ActivitySource;
+  toolName?: string;
   action: string;
   detail: string;
-  timestamp: string;
+  status?: ActivityStatus;
 }
 
 export interface Workspace {
