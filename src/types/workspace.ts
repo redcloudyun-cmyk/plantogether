@@ -1,5 +1,8 @@
 export type ItemStatus = 'backlog' | 'planned' | 'doing' | 'done';
 export type Actor = 'human' | 'agent';
+export type RiskLevel = 'low' | 'medium' | 'high';
+export type AutonomyMode = 'observe' | 'assist' | 'autonomous';
+export type ProposalStatus = 'pending' | 'approved' | 'rejected' | 'applied';
 
 export interface RevertSnapshot {
   title: string;
@@ -45,6 +48,34 @@ export interface Workspace {
   items: PlanItem[];
   selectedItemId: string | null;
   updatedAt: string;
+}
+
+/** Subset of PlanItem fields a proposal changes. Only the touched fields are present. */
+export interface ProposalChangeSet {
+  title?: string;
+  description?: string;
+  status?: ItemStatus;
+  owner?: string;
+  dueDate?: string;
+  dependencies?: string[];
+}
+
+export interface Proposal {
+  id: string;
+  itemId: string;
+  itemTitle: string;
+  riskLevel: RiskLevel;
+  /** The item's values for the touched fields, before this change. */
+  before: ProposalChangeSet;
+  /** The item's values for the touched fields, after this change is applied. */
+  after: ProposalChangeSet;
+  /** Why the agent is proposing this change. Comes from the agent's tool call, never fabricated. */
+  reason: string;
+  /** Which WebMCP tool triggered this proposal. */
+  tool: string;
+  status: ProposalStatus;
+  createdAt: string;
+  resolvedAt?: string;
 }
 
 export const COLUMNS: { id: ItemStatus; title: string }[] = [

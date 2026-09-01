@@ -4,6 +4,7 @@ import Board from './components/Board';
 import LiveHumanContext from './components/LiveHumanContext';
 import WebMcpActivity from './components/WebMcpActivity';
 import StatusBar from './components/StatusBar';
+import ProposalModal from './components/ProposalModal';
 import { registerWebMCPTools } from './webmcp/registerTools';
 
 export default function App() {
@@ -34,6 +35,7 @@ export default function App() {
         </aside>
       </div>
       <StatusBar />
+      <ProposalModal />
     </div>
   );
 }

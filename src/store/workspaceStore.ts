@@ -1,11 +1,26 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { PlanItem, ItemStatus, ActivityLogEntry, Actor, RevertSnapshot } from '../types/workspace';
+import type {
+  PlanItem,
+  ItemStatus,
+  ActivityLogEntry,
+  Actor,
+  RevertSnapshot,
+  Proposal,
+  ProposalChangeSet,
+  RiskLevel,
+  AutonomyMode,
+} from '../types/workspace';
 import { demoWorkspace } from '../data/demoWorkspace';
 
 let idCounter = 100;
 function generateId(): string {
   return `item_${Date.now()}_${idCounter++}`;
+}
+
+let proposalCounter = 1;
+function generateProposalId(): string {
+  return `proposal_${proposalCounter++}`;
 }
 
 function getIncompleteDependencies(item: PlanItem, allItems: PlanItem[]): PlanItem[] {
@@ -29,6 +44,10 @@ interface WorkspaceState {
   // WebMCP status
   webmcpAvailable: boolean;
 
+  // Agent Proposal / Human Approval (V1.4 §15)
+  proposals: Proposal[];
+  autonomyMode: AutonomyMode;
+
   // Actions
   addItem: (item: Partial<PlanItem> & { title: string }, actor?: Actor) => PlanItem;
   updateItem: (id: string, changes: Partial<Omit<PlanItem, 'id' | 'createdAt' | 'createdBy'>>, actor?: Actor) => { success: boolean; reason?: string; item?: PlanItem };
@@ -43,6 +62,23 @@ interface WorkspaceState {
   addActivityLog: (entry: Omit<ActivityLogEntry, 'id' | 'timestamp'>) => void;
   setWebmcpAvailable: (available: boolean) => void;
   resetWorkspace: () => void;
+
+  // Proposal actions
+  setAutonomyMode: (mode: AutonomyMode) => void;
+  createProposal: (input: {
+    itemId: string;
+    itemTitle: string;
+    riskLevel: RiskLevel;
+    before: ProposalChangeSet;
+    after: ProposalChangeSet;
+    reason: string;
+    tool: string;
+  }) => Proposal;
+  approveProposal: (id: string) => { success: boolean; reason?: string };
+  rejectProposal: (id: string) => { success: boolean; reason?: string };
+  approveAllPending: () => void;
+  rejectAllPending: () => void;
+  getPendingProposals: () => Proposal[];
 }
 
 export const useWorkspaceStore = create<WorkspaceState>()(
@@ -56,6 +92,8 @@ export const useWorkspaceStore = create<WorkspaceState>()(
       updatedAt: demoWorkspace.updatedAt,
       activityLog: [],
       webmcpAvailable: false,
+      proposals: [],
+      autonomyMode: 'assist',
 
       addItem: (itemData, actor = 'human') => {
         const now = new Date().toISOString();
@@ -289,7 +327,133 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           selectedItemId: demoWorkspace.selectedItemId,
           updatedAt: new Date().toISOString(),
           activityLog: [],
+          proposals: [],
+          autonomyMode: 'assist',
         });
+      },
+
+      setAutonomyMode: (mode) => {
+        set({ autonomyMode: mode });
+        get().addActivityLog({
+          source: 'human',
+          action: 'Autonomy',
+          detail: `Mode set to ${mode}`,
+          status: 'success',
+        });
+      },
+
+      createProposal: ({ itemId, itemTitle, riskLevel, before, after, reason, tool }) => {
+        const proposal: Proposal = {
+          id: generateProposalId(),
+          itemId,
+          itemTitle,
+          riskLevel,
+          before,
+          after,
+          reason,
+          tool,
+          status: 'pending',
+          createdAt: new Date().toISOString(),
+        };
+
+        set((state) => ({
+          proposals: [...state.proposals, proposal],
+        }));
+
+        get().addActivityLog({
+          source: 'webmcp',
+          toolName: tool,
+          action: 'Proposed',
+          detail: `"${itemTitle}" — ${riskLevel.toUpperCase()} risk change pending approval`,
+          status: 'success',
+        });
+
+        return proposal;
+      },
+
+      approveProposal: (id) => {
+        const state = get();
+        const proposal = state.proposals.find((p) => p.id === id);
+        if (!proposal) {
+          return { success: false, reason: 'PROPOSAL_NOT_FOUND' };
+        }
+        if (proposal.status !== 'pending') {
+          return { success: false, reason: 'PROPOSAL_ALREADY_RESOLVED' };
+        }
+
+        const result = state.updateItem(proposal.itemId, proposal.after, 'agent');
+        const now = new Date().toISOString();
+
+        if (!result.success) {
+          set((s) => ({
+            proposals: s.proposals.map((p) =>
+              p.id === id ? { ...p, status: 'rejected', resolvedAt: now } : p
+            ),
+          }));
+          get().addActivityLog({
+            source: 'webmcp',
+            toolName: proposal.tool,
+            action: 'Blocked',
+            detail: `Proposal for "${proposal.itemTitle}" could not be applied\n${result.reason}`,
+            status: 'blocked',
+          });
+          return result;
+        }
+
+        set((s) => ({
+          proposals: s.proposals.map((p) =>
+            p.id === id ? { ...p, status: 'applied', resolvedAt: now } : p
+          ),
+        }));
+        get().addActivityLog({
+          source: 'webmcp',
+          toolName: proposal.tool,
+          action: 'Applied',
+          detail: `"${proposal.itemTitle}" — proposal approved and applied`,
+          status: 'success',
+        });
+
+        return { success: true };
+      },
+
+      rejectProposal: (id) => {
+        const state = get();
+        const proposal = state.proposals.find((p) => p.id === id);
+        if (!proposal) {
+          return { success: false, reason: 'PROPOSAL_NOT_FOUND' };
+        }
+        if (proposal.status !== 'pending') {
+          return { success: false, reason: 'PROPOSAL_ALREADY_RESOLVED' };
+        }
+
+        const now = new Date().toISOString();
+        set((s) => ({
+          proposals: s.proposals.map((p) =>
+            p.id === id ? { ...p, status: 'rejected', resolvedAt: now } : p
+          ),
+        }));
+        get().addActivityLog({
+          source: 'human',
+          action: 'Rejected',
+          detail: `"${proposal.itemTitle}" — proposal rejected by human`,
+          status: 'success',
+        });
+
+        return { success: true };
+      },
+
+      approveAllPending: () => {
+        const pending = get().proposals.filter((p) => p.status === 'pending');
+        pending.forEach((p) => get().approveProposal(p.id));
+      },
+
+      rejectAllPending: () => {
+        const pending = get().proposals.filter((p) => p.status === 'pending');
+        pending.forEach((p) => get().rejectProposal(p.id));
+      },
+
+      getPendingProposals: () => {
+        return get().proposals.filter((p) => p.status === 'pending');
       },
     }),
     {
@@ -300,6 +464,8 @@ export const useWorkspaceStore = create<WorkspaceState>()(
         items: state.items,
         selectedItemId: state.selectedItemId,
         updatedAt: state.updatedAt,
+        proposals: state.proposals,
+        autonomyMode: state.autonomyMode,
       }),
     }
   )
