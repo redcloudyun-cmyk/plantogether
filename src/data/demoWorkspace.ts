@@ -16,27 +16,27 @@ export function createDemoActivityLog(): ActivityLogEntry[] {
   return [
     {
       id: 'seed_1', timestamp: minutesAgo(30), source: 'human', action: 'Selected',
-      detail: '"Run Chrome WebMCP Judge Test"', status: 'success',
+      detail: '"Run Chrome WebMCP Judge Test"', status: 'success', seeded: true,
     },
     {
       id: 'seed_2', timestamp: minutesAgo(27), source: 'webmcp', toolName: 'get_workspace_state', action: 'get_workspace_state',
-      detail: '8 live items read', status: 'success',
+      detail: '8 live items read', status: 'success', seeded: true,
     },
     {
       id: 'seed_3', timestamp: minutesAgo(26), source: 'webmcp', toolName: 'analyze_plan', action: 'analyze_plan',
-      detail: '8 items, 1 locked', status: 'success',
+      detail: '8 items, 1 locked', status: 'success', seeded: true,
     },
     {
       id: 'seed_4', timestamp: minutesAgo(24), source: 'webmcp', toolName: 'update_item', action: 'Proposed',
-      detail: '"Record Final Demo Video" — MEDIUM risk change pending approval', status: 'success',
+      detail: '"Record Final Demo Video" — MEDIUM risk change pending approval', status: 'success', seeded: true,
     },
     {
       id: 'seed_5', timestamp: minutesAgo(21), source: 'human', action: 'Rejected',
-      detail: '"Record Final Demo Video" — proposal rejected by human', status: 'success',
+      detail: '"Record Final Demo Video" — proposal rejected by human', status: 'success', seeded: true,
     },
     {
       id: 'seed_6', timestamp: minutesAgo(18), source: 'human', action: 'Locked',
-      detail: '"Submit Final Devpost Entry"', status: 'success',
+      detail: '"Submit Final Devpost Entry"', status: 'success', seeded: true,
     },
   ];
 }

@@ -53,8 +53,16 @@ function ActivityRow({ entry }: { entry: ActivityLogEntry }) {
         <span className={`mt-0.5 flex-shrink-0 ${className}`}>{icon}</span>
         <div className="flex-1 min-w-0">
           <div className="flex items-baseline justify-between gap-2">
-            <span className="text-sm font-medium text-text-primary">
+            <span className="text-sm font-medium text-text-primary flex items-center gap-1.5">
               {entry.toolName || entry.action}
+              {entry.seeded && (
+                <span
+                  className="text-[9px] font-semibold tracking-wide text-violet-600 bg-violet-100 rounded px-1 py-0.5"
+                  title={t('demoActivityTooltip')}
+                >
+                  {t('demoActivityBadge')}
+                </span>
+              )}
             </span>
             <span className="text-xs text-text-tertiary flex-shrink-0">{formatTimestamp(entry.timestamp)}</span>
           </div>
@@ -111,6 +119,7 @@ export default function ActivityScreen() {
     () => [...activityLog].reverse().filter((e) => matchesFilter(e, filter)),
     [activityLog, filter]
   );
+  const hasSeeded = useMemo(() => activityLog.some((e) => e.seeded), [activityLog]);
 
   const summary = useMemo(() => {
     const humanActions = activityLog.filter((e) => e.source === 'human').length;
@@ -125,6 +134,12 @@ export default function ActivityScreen() {
   return (
     <div className="flex-1 overflow-y-auto p-6">
       <div className="max-w-7xl mx-auto flex flex-col gap-4">
+        {hasSeeded && (
+          <p className="text-xs text-violet-700 bg-violet-50 border border-violet-200 rounded-lg px-3 py-2">
+            {t('demoHistoryBanner')}
+          </p>
+        )}
+
         <div className="bg-surface rounded-xl border border-border py-3 flex items-center justify-around flex-wrap gap-y-2">
           <StatBox label={t('human')} value={summary.humanActions} />
           <StatBox label={t('agentActionsFilter')} value={summary.agentActions} />

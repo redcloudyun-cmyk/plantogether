@@ -51,6 +51,8 @@ export interface ActivityLogEntry {
   action: string;
   detail: string;
   status?: ActivityStatus;
+  /** True only for the pre-seeded sample history (see createDemoActivityLog) — never set by real Human/Agent actions. Lets the UI mark it clearly so it can't be mistaken for a live WebMCP call. */
+  seeded?: boolean;
 }
 
 export interface Workspace {
