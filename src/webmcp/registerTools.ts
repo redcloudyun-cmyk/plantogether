@@ -307,9 +307,13 @@ export async function registerWebMCPTools(): Promise<() => void> {
             return { success: false, reason: 'ITEM_LOCKED_BY_HUMAN', message: REASON_MESSAGES.ITEM_LOCKED_BY_HUMAN };
           }
 
-          const typedChanges = {
-            ...changes,
-            status: changes.status as 'backlog' | 'planned' | 'doing' | 'done' | undefined,
+          // Only include `status` when the caller actually passed one — an explicit
+          // `status: undefined` key would still be spread onto the item later and wipe
+          // out its real status (object spread copies own keys regardless of value).
+          const { status: rawStatus, ...changesWithoutStatus } = changes;
+          const typedChanges: ProposalChangeSet = {
+            ...changesWithoutStatus,
+            ...(rawStatus !== undefined ? { status: rawStatus as 'backlog' | 'planned' | 'doing' | 'done' } : {}),
           };
 
           // Dependency completeness is validated up front regardless of risk/autonomy,
