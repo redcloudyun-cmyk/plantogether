@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useWorkspaceStore } from '../store/workspaceStore';
-import type { PlanItem, ItemStatus } from '../types/workspace';
+import type { PlanItem, ItemStatus, ItemPriority } from '../types/workspace';
 
 interface CardEditorProps {
   item?: PlanItem | null;
@@ -18,6 +18,7 @@ export default function CardEditor({ item, defaultStatus = 'backlog', onClose }:
   const [owner, setOwner] = useState(item?.owner || '');
   const [dueDate, setDueDate] = useState(item?.dueDate || '');
   const [status, setStatus] = useState<ItemStatus>(item?.status || defaultStatus);
+  const [priority, setPriority] = useState<ItemPriority>(item?.priority || 'medium');
   const [error, setError] = useState<string | null>(null);
 
   const titleRef = useRef<HTMLInputElement>(null);
@@ -46,6 +47,7 @@ export default function CardEditor({ item, defaultStatus = 'backlog', onClose }:
         owner: owner.trim() || undefined,
         dueDate: dueDate || undefined,
         status,
+        priority,
       }, 'human');
 
       if (!result.success) {
@@ -78,6 +80,7 @@ export default function CardEditor({ item, defaultStatus = 'backlog', onClose }:
         owner: owner.trim() || undefined,
         dueDate: dueDate || undefined,
         status,
+        priority,
       }, 'human');
 
       addActivityLog({
@@ -157,7 +160,8 @@ export default function CardEditor({ item, defaultStatus = 'backlog', onClose }:
             </div>
           </div>
 
-          <div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
             <label className="block text-xs font-medium text-text-secondary mb-1">
               Status
             </label>
@@ -174,6 +178,21 @@ export default function CardEditor({ item, defaultStatus = 'backlog', onClose }:
               <option value="doing">Doing</option>
               <option value="done">Done</option>
             </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-text-secondary mb-1">
+                Priority
+              </label>
+              <select
+                value={priority}
+                onChange={(e) => setPriority(e.target.value as ItemPriority)}
+                className="w-full px-3 py-2 text-sm border border-border rounded-lg bg-surface focus:outline-none focus:ring-2 focus:ring-primary-200 focus:border-primary-400 transition-all"
+              >
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+              </select>
+            </div>
           </div>
 
           {error && (

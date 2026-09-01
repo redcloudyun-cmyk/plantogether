@@ -18,7 +18,7 @@ const AUTONOMY_MODES: { id: AutonomyMode; label: string; hint: string }[] = [
 
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="bg-surface rounded-xl border border-border p-4">
+    <div className="bg-surface rounded-xl border border-border p-4 min-h-[190px]">
       <h2 className="text-xs font-semibold text-text-secondary tracking-wide mb-3">{title}</h2>
       {children}
     </div>
@@ -32,14 +32,7 @@ export default function SettingsScreen() {
 
   return (
     <div className="flex-1 overflow-y-auto p-6">
-      <div className="max-w-4xl mx-auto flex flex-col gap-4">
-        <div>
-          <h1 className="text-lg font-semibold text-text-primary">Settings / WebMCP</h1>
-          <p className="text-sm text-text-tertiary mt-0.5">
-            What the agent can see and do, and how independently it's allowed to act.
-          </p>
-        </div>
-
+      <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-4">
         <Card title="WEBMCP STATUS">
           <div className="flex items-center gap-2">
             <div className={`w-2.5 h-2.5 rounded-full ${webmcpAvailable ? 'bg-green-500' : 'bg-text-tertiary'}`} />

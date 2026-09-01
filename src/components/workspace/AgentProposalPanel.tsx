@@ -7,6 +7,9 @@ const STATUS_LABELS: Record<string, string> = {
   planned: 'Planned',
   doing: 'Doing',
   done: 'Done',
+  low: 'Low',
+  medium: 'Medium',
+  high: 'High',
 };
 
 const RISK_STYLES: Record<RiskLevel, string> = {
@@ -21,6 +24,7 @@ const FIELD_LABELS: Record<keyof ProposalChangeSet, string> = {
   status: 'Status',
   owner: 'Owner',
   dueDate: 'Due Date',
+  priority: 'Priority',
   dependencies: 'Dependencies',
 };
 
@@ -28,6 +32,7 @@ function formatFieldValue(field: keyof ProposalChangeSet, value: unknown): strin
   if (value === undefined || value === null || value === '') return '—';
   switch (field) {
     case 'status':
+    case 'priority':
       return STATUS_LABELS[value as string] || (value as string);
     case 'dependencies': {
       const deps = value as string[];

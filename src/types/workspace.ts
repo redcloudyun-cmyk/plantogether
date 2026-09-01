@@ -3,6 +3,15 @@ export type Actor = 'human' | 'agent';
 export type RiskLevel = 'low' | 'medium' | 'high';
 export type AutonomyMode = 'observe' | 'assist' | 'autonomous';
 export type ProposalStatus = 'pending' | 'approved' | 'rejected' | 'applied';
+export type ItemPriority = 'low' | 'medium' | 'high';
+export type ContextScopeKey =
+  | 'currentItem'
+  | 'boardState'
+  | 'dependencies'
+  | 'planStatus'
+  | 'activityHistory'
+  | 'completedItems'
+  | 'teamInformation';
 
 export interface RevertSnapshot {
   title: string;
@@ -10,6 +19,7 @@ export interface RevertSnapshot {
   status: ItemStatus;
   owner?: string;
   dueDate?: string;
+  priority?: ItemPriority;
 }
 
 export interface PlanItem {
@@ -19,6 +29,7 @@ export interface PlanItem {
   status: ItemStatus;
   owner?: string;
   dueDate?: string;
+  priority?: ItemPriority;
   locked: boolean;
   dependencies: string[];
   createdBy: Actor;
@@ -57,6 +68,7 @@ export interface ProposalChangeSet {
   status?: ItemStatus;
   owner?: string;
   dueDate?: string;
+  priority?: ItemPriority;
   dependencies?: string[];
 }
 

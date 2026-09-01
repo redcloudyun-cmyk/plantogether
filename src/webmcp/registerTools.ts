@@ -140,6 +140,11 @@ export async function registerWebMCPTools(): Promise<() => void> {
               enum: ['backlog', 'planned', 'doing', 'done'],
               description: 'The column to place this item in. Defaults to "planned".',
             },
+            priority: {
+              type: 'string',
+              enum: ['low', 'medium', 'high'],
+              description: 'Priority. Defaults to "medium".',
+            },
             owner: {
               type: 'string',
               description: 'The person assigned to this item',
@@ -162,10 +167,11 @@ export async function registerWebMCPTools(): Promise<() => void> {
           additionalProperties: false,
         },
         execute: async (args) => {
-          const { title, description, status, owner, dueDate, dependencies, reason } = args as {
+          const { title, description, status, priority, owner, dueDate, dependencies, reason } = args as {
             title: string;
             description?: string;
             status?: string;
+            priority?: 'low' | 'medium' | 'high';
             owner?: string;
             dueDate?: string;
             dependencies?: string[];
@@ -201,6 +207,7 @@ export async function registerWebMCPTools(): Promise<() => void> {
               title: title.trim(),
               description,
               status: (status as 'backlog' | 'planned' | 'doing' | 'done') || 'planned',
+              priority,
               owner,
               dueDate,
               dependencies,
@@ -227,7 +234,7 @@ export async function registerWebMCPTools(): Promise<() => void> {
         name: 'update_item',
         title: 'Update Planning Item',
         description:
-          'Updates an existing planning item. You can change the title, description, status, owner, due date, or dependencies. Low-risk edits (title/description/owner) apply immediately. Due date, status, or dependency changes are medium/high risk: depending on the current autonomy mode, they may instead create a Proposal that a human must approve before it takes effect (the response will have proposed: true and no board change will be visible yet). Cannot modify items that are locked by the human user — that always takes priority over autonomy mode, so a locked item stays locked until the human unlocks it.',
+          'Updates an existing planning item. You can change the title, description, status, priority, owner, due date, or dependencies. Low-risk edits (title/description/owner) apply immediately. Due date, status, priority, or dependency changes are medium/high risk: depending on the current autonomy mode, they may instead create a Proposal that a human must approve before it takes effect (the response will have proposed: true and no board change will be visible yet). Cannot modify items that are locked by the human user — that always takes priority over autonomy mode, so a locked item stays locked until the human unlocks it.',
         inputSchema: {
           type: 'object',
           properties: {
@@ -247,6 +254,11 @@ export async function registerWebMCPTools(): Promise<() => void> {
               type: 'string',
               enum: ['backlog', 'planned', 'doing', 'done'],
               description: 'New status/column',
+            },
+            priority: {
+              type: 'string',
+              enum: ['low', 'medium', 'high'],
+              description: 'New priority',
             },
             owner: {
               type: 'string',
@@ -276,6 +288,7 @@ export async function registerWebMCPTools(): Promise<() => void> {
             title?: string;
             description?: string;
             status?: string;
+            priority?: 'low' | 'medium' | 'high';
             owner?: string;
             dueDate?: string;
             dependencies?: string[];

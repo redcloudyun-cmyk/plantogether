@@ -10,6 +10,7 @@ import type {
   ProposalChangeSet,
   RiskLevel,
   AutonomyMode,
+  ContextScopeKey,
 } from '../types/workspace';
 import { demoWorkspace } from '../data/demoWorkspace';
 
@@ -22,6 +23,16 @@ let proposalCounter = 1;
 function generateProposalId(): string {
   return `proposal_${proposalCounter++}`;
 }
+
+const DEFAULT_CONTEXT_SCOPE: Record<ContextScopeKey, boolean> = {
+  currentItem: true,
+  boardState: true,
+  dependencies: true,
+  planStatus: true,
+  activityHistory: false,
+  completedItems: false,
+  teamInformation: false,
+};
 
 function getIncompleteDependencies(item: PlanItem, allItems: PlanItem[]): PlanItem[] {
   if (item.dependencies.length === 0) return [];
@@ -47,6 +58,7 @@ interface WorkspaceState {
   // Agent Proposal / Human Approval (V1.4 §15)
   proposals: Proposal[];
   autonomyMode: AutonomyMode;
+  contextScope: Record<ContextScopeKey, boolean>;
 
   // Actions
   addItem: (item: Partial<PlanItem> & { title: string }, actor?: Actor) => PlanItem;
@@ -65,6 +77,7 @@ interface WorkspaceState {
 
   // Proposal actions
   setAutonomyMode: (mode: AutonomyMode) => void;
+  toggleContextScope: (key: ContextScopeKey) => void;
   createProposal: (input: {
     itemId: string;
     itemTitle: string;
@@ -94,6 +107,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
       webmcpAvailable: false,
       proposals: [],
       autonomyMode: 'assist',
+      contextScope: DEFAULT_CONTEXT_SCOPE,
 
       addItem: (itemData, actor = 'human') => {
         const now = new Date().toISOString();
@@ -104,6 +118,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           status: itemData.status || 'backlog',
           owner: itemData.owner || undefined,
           dueDate: itemData.dueDate || undefined,
+          priority: itemData.priority || 'medium',
           locked: false,
           dependencies: itemData.dependencies || [],
           createdBy: actor,
@@ -156,6 +171,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
                 status: item.status,
                 owner: item.owner,
                 dueDate: item.dueDate,
+                priority: item.priority,
               }
             : undefined;
 
@@ -329,6 +345,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           activityLog: [],
           proposals: [],
           autonomyMode: 'assist',
+          contextScope: DEFAULT_CONTEXT_SCOPE,
         });
       },
 
@@ -340,6 +357,12 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           detail: `Mode set to ${mode}`,
           status: 'success',
         });
+      },
+
+      toggleContextScope: (key) => {
+        set((state) => ({
+          contextScope: { ...state.contextScope, [key]: !state.contextScope[key] },
+        }));
       },
 
       createProposal: ({ itemId, itemTitle, riskLevel, before, after, reason, tool }) => {
@@ -466,6 +489,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
         updatedAt: state.updatedAt,
         proposals: state.proposals,
         autonomyMode: state.autonomyMode,
+        contextScope: state.contextScope,
       }),
     }
   )

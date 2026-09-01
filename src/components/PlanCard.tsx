@@ -12,6 +12,12 @@ const CONFLICT_BADGE: Record<string, { icon: string; label: string }> = {
   dependency_cycle: { icon: '⚠', label: 'Circular Dependency' },
 };
 
+const PRIORITY_STYLES = {
+  low: 'bg-slate-100 text-slate-600',
+  medium: 'bg-amber-50 text-amber-700',
+  high: 'bg-rose-50 text-rose-700',
+};
+
 interface PlanCardProps {
   item: PlanItem;
   onEdit: (item: PlanItem) => void;
@@ -120,7 +126,7 @@ export default function PlanCard({ item, onEdit }: PlanCardProps) {
       onClick={handleSelect}
       onDoubleClick={handleDoubleClick}
       className={`
-        group relative bg-surface rounded-lg border p-3 cursor-grab active:cursor-grabbing
+        group relative bg-surface rounded-lg border p-3 min-h-[108px] cursor-grab active:cursor-grabbing
         transition-all duration-200 
         ${isDragging ? 'opacity-50 shadow-lg scale-105' : 'hover:shadow-sm hover:border-border-hover'}
         ${isSelected ? 'border-primary-400 ring-1 ring-primary-200' : 'border-border'}
@@ -159,6 +165,9 @@ export default function PlanCard({ item, onEdit }: PlanCardProps) {
 
       {/* Meta row */}
       <div className="mt-2 flex items-center gap-2 flex-wrap">
+        <span className={`text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded ${PRIORITY_STYLES[item.priority || 'medium']}`}>
+          {item.priority || 'medium'}
+        </span>
         {item.dueDate && (
           <span className="inline-flex items-center gap-1 text-xs text-text-secondary bg-surface-secondary px-1.5 py-0.5 rounded">
             <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

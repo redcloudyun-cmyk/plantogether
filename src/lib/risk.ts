@@ -16,7 +16,7 @@ export function classifyRisk(changes: ProposalChangeSet): RiskLevel {
   if (touched.some((field) => field === 'dependencies')) {
     return 'high';
   }
-  if (touched.some((field) => field === 'dueDate' || field === 'status')) {
+  if (touched.some((field) => field === 'dueDate' || field === 'status' || field === 'priority')) {
     return 'medium';
   }
   // title / description / owner

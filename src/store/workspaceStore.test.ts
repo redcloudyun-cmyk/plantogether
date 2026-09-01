@@ -14,8 +14,27 @@ describe('addItem', () => {
     const item = useWorkspaceStore.getState().addItem({ title: 'Test' });
     expect(item.title).toBe('Test');
     expect(item.status).toBe('backlog');
+    expect(item.priority).toBe('medium');
     expect(item.locked).toBe(false);
     expect(useWorkspaceStore.getState().items).toHaveLength(1);
+  });
+});
+
+describe('context scope', () => {
+  it('lets the human toggle what context is shared', () => {
+    useWorkspaceStore.setState({
+      contextScope: {
+        currentItem: true,
+        boardState: true,
+        dependencies: true,
+        planStatus: true,
+        activityHistory: false,
+        completedItems: false,
+        teamInformation: false,
+      },
+    });
+    useWorkspaceStore.getState().toggleContextScope('activityHistory');
+    expect(useWorkspaceStore.getState().contextScope.activityHistory).toBe(true);
   });
 });
 

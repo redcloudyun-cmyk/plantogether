@@ -124,14 +124,7 @@ export default function ActivityScreen() {
 
   return (
     <div className="flex-1 overflow-y-auto p-6">
-      <div className="max-w-4xl mx-auto flex flex-col gap-4">
-        <div>
-          <h1 className="text-lg font-semibold text-text-primary">Activity</h1>
-          <p className="text-sm text-text-tertiary mt-0.5">
-            Real-time session history of every human and agent action — nothing here is seeded or fabricated.
-          </p>
-        </div>
-
+      <div className="max-w-7xl mx-auto flex flex-col gap-4">
         <div className="bg-surface rounded-xl border border-border py-3 flex items-center justify-around flex-wrap gap-y-2">
           <StatBox label="Human" value={summary.humanActions} />
           <StatBox label="Agent" value={summary.agentActions} />
@@ -157,7 +150,7 @@ export default function ActivityScreen() {
           ))}
         </div>
 
-        <div className="bg-surface rounded-xl border border-border overflow-hidden">
+        <div className="bg-surface rounded-xl border border-border overflow-hidden min-h-[430px]">
           {filtered.length === 0 ? (
             <p className="px-4 py-8 text-center text-sm text-text-tertiary">
               {activityLog.length === 0
