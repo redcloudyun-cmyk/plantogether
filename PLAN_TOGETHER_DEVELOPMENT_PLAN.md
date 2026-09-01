@@ -1,5 +1,7 @@
 # PlanTogether — WebMCP Challenge 개발 실행 계획
 
+> **진행 상황 (2026-09-01)**: P0 중 main branch 정리 / LICENSE / README 완료. P1(Live Human Context, Reset Demo + Demo Dataset, WebMCP Live Activity Trace), P1 Refactor(lock_item 제거, analyze_plan 개명), P2(moveItem lock 일관성, validation 통일, activity log UUID) 전부 완료. 남은 것은 **Live Deployment(P0-4)**와 **P3**(UI polish, Demo video, Devpost 제출 — 후자 둘은 사람이 직접 진행). 자세한 내용은 섹션 18의 체크리스트 참고.
+
 **Version:** 1.1
 **Target:** OpenAI × Devpost WebMCP Challenge
 **Repository:** `redcloudyun-cmyk/plantogether`
@@ -950,38 +952,38 @@ Multi Agent
 
 ## WebMCP
 
-- [ ] `get_workspace_state`
-- [ ] `get_current_focus`
-- [ ] `add_item`
-- [ ] `update_item`
-- [ ] `analyze_plan` (rename from `rebalance_plan`)
-- [ ] `lock_item` 제거
-- [ ] Locked Item Agent 수정 차단
-- [ ] Tool execution refresh 없음
+- [x] `get_workspace_state`
+- [x] `get_current_focus`
+- [x] `add_item`
+- [x] `update_item`
+- [x] `analyze_plan` (rename from `rebalance_plan`)
+- [x] `lock_item` 제거
+- [x] Locked Item Agent 수정 차단 (`update_item` + `moveItem` 모두)
+- [x] Tool execution refresh 없음 (Playwright로 재확인됨)
 
 ## New Must-Have
 
-- [ ] Live Human Context 패널
-- [ ] Reset Demo
-- [ ] Strong Demo Dataset
-- [ ] WebMCP Live Activity Trace
+- [x] Live Human Context 패널
+- [x] Reset Demo
+- [x] Strong Demo Dataset
+- [x] WebMCP Live Activity Trace
 
 ## Repository
 
 - [x] default branch = `main`
-- [ ] MIT LICENSE
-- [ ] Challenge README
+- [x] MIT LICENSE
+- [x] Challenge README
 - [x] Public repository
-- [ ] Live deployment URL
+- [ ] Live deployment URL — **대기 중**: 배포 플랫폼(Vercel/Cloudflare Pages/기타)과 계정 연동은 사용자 확인 필요
 
 ## Quality
 
 - [x] npm run build 통과
 - [x] npm run lint 통과
 - [x] Vitest 단위 테스트 (스토어 + 컴포넌트)
-- [ ] WebMCP actual browser E2E 통과
-- [ ] Demo reset 3회 연속 정상
-- [ ] 90초 Demo Scenario 연속 재현 가능
+- [x] WebMCP actual browser E2E 통과 (Playwright 헤드리스로 새 레이아웃/데이터셋/Reset 확인)
+- [ ] Demo reset 3회 연속 정상 — 수동 반복 확인 아직 안 함
+- [ ] 90초 Demo Scenario 연속 재현 가능 — 실제 WebMCP 클라이언트로 아직 미검증
 
 ---
 
@@ -992,26 +994,26 @@ Multi Agent
 ```text
 P0
 1. main branch 정리                 [완료]
-2. LICENSE
-3. README
-4. Live Deployment
+2. LICENSE                          [완료]
+3. README                           [완료]
+4. Live Deployment                  [대기 — 플랫폼/계정 확인 필요]
 
 P1
-5. Live Human Context
-6. Reset Demo + Demo Dataset
-7. WebMCP Live Activity Trace
+5. Live Human Context                [완료]
+6. Reset Demo + Demo Dataset         [완료]
+7. WebMCP Live Activity Trace        [완료]
 
 P1 Refactor
-8. lock_item 제거
-9. rebalance_plan → analyze_plan
+8. lock_item 제거                    [완료]
+9. rebalance_plan → analyze_plan     [완료]
 
 P2
-10. moveItem lock consistency
-11. validation consistency
-12. activity log ID 개선
+10. moveItem lock consistency        [완료]
+11. validation consistency           [완료]
+12. activity log ID 개선             [완료]
 
 P3
-13. UI polish
+13. UI polish                        [진행 예정]
 14. Demo video
 15. Devpost submission
 ```
