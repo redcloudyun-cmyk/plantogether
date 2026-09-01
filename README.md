@@ -23,9 +23,9 @@ There's no export step, no sync delay, and no second source of truth. The board 
 
 ## Live Demo
 
-**[redcloudyun-cmyk.github.io/plantogether](https://redcloudyun-cmyk.github.io/plantogether/)**
+**[withgex-test.agex.site](https://withgex-test.agex.site/)**
 
-Deployed automatically from `main` via GitHub Actions (`.github/workflows/deploy.yml`) to GitHub Pages.
+Also mirrored at [redcloudyun-cmyk.github.io/plantogether](https://redcloudyun-cmyk.github.io/plantogether/), deployed automatically from `main` via GitHub Actions (`.github/workflows/deploy.yml`) to GitHub Pages.
 
 ## Human-Agent Collaboration
 
