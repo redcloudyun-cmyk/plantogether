@@ -12,7 +12,7 @@ import type {
   AutonomyMode,
   ContextScopeKey,
 } from '../types/workspace';
-import { demoWorkspace } from '../data/demoWorkspace';
+import { demoWorkspace, createDemoActivityLog } from '../data/demoWorkspace';
 import { computePlanHealth, type PlanHealth } from '../lib/planAnalysis';
 
 let idCounter = 100;
@@ -149,7 +149,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
       items: demoWorkspace.items,
       selectedItemId: demoWorkspace.selectedItemId,
       updatedAt: demoWorkspace.updatedAt,
-      activityLog: [],
+      activityLog: createDemoActivityLog(),
       webmcpAvailable: false,
       proposals: [],
       autonomyMode: 'assist',
@@ -287,6 +287,13 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           updatedAt: now,
         }));
 
+        get().addActivityLog({
+          source: 'human',
+          action: 'Locked',
+          detail: `"${item.title}"`,
+          status: 'success',
+        });
+
         return { success: true };
       },
 
@@ -304,6 +311,13 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           ),
           updatedAt: now,
         }));
+
+        get().addActivityLog({
+          source: 'human',
+          action: 'Unlocked',
+          detail: `"${item.title}"`,
+          status: 'success',
+        });
 
         return { success: true };
       },
@@ -406,7 +420,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           items: demoWorkspace.items,
           selectedItemId: demoWorkspace.selectedItemId,
           updatedAt: new Date().toISOString(),
-          activityLog: [],
+          activityLog: createDemoActivityLog(),
           proposals: [],
           autonomyMode: 'assist',
           contextScope: DEFAULT_CONTEXT_SCOPE,

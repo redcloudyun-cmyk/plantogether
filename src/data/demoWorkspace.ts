@@ -1,6 +1,45 @@
-import type { PlanItem, Workspace } from '../types/workspace';
+import type { ActivityLogEntry, PlanItem, Workspace } from '../types/workspace';
 
 const now = new Date().toISOString();
+
+/**
+ * A pre-seeded slice of Activity history so a first-time visitor (or a
+ * fresh Reset Demo) sees Human/Agent collaboration already in progress
+ * instead of an empty Activity screen. Same ActivityLogEntry shape as
+ * real runtime entries — timestamps are relative to "now" so they always
+ * read as "recent" no matter when the page loads.
+ */
+export function createDemoActivityLog(): ActivityLogEntry[] {
+  const base = Date.now();
+  const minutesAgo = (m: number) => new Date(base - m * 60_000).toISOString();
+
+  return [
+    {
+      id: 'seed_1', timestamp: minutesAgo(30), source: 'human', action: 'Selected',
+      detail: '"Run Chrome WebMCP Judge Test"', status: 'success',
+    },
+    {
+      id: 'seed_2', timestamp: minutesAgo(27), source: 'webmcp', toolName: 'get_workspace_state', action: 'get_workspace_state',
+      detail: '8 live items read', status: 'success',
+    },
+    {
+      id: 'seed_3', timestamp: minutesAgo(26), source: 'webmcp', toolName: 'analyze_plan', action: 'analyze_plan',
+      detail: '8 items, 1 locked', status: 'success',
+    },
+    {
+      id: 'seed_4', timestamp: minutesAgo(24), source: 'webmcp', toolName: 'update_item', action: 'Proposed',
+      detail: '"Record Final Demo Video" — MEDIUM risk change pending approval', status: 'success',
+    },
+    {
+      id: 'seed_5', timestamp: minutesAgo(21), source: 'human', action: 'Rejected',
+      detail: '"Record Final Demo Video" — proposal rejected by human', status: 'success',
+    },
+    {
+      id: 'seed_6', timestamp: minutesAgo(18), source: 'human', action: 'Locked',
+      detail: '"Submit Final Devpost Entry"', status: 'success',
+    },
+  ];
+}
 
 const demoItems: PlanItem[] = [
   {
