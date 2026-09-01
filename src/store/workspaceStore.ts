@@ -457,7 +457,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
       },
     }),
     {
-      name: 'plantogether-workspace',
+      name: 'withgex-workspace',
       partialize: (state) => ({
         id: state.id,
         title: state.title,

@@ -28,11 +28,11 @@ export default function Header({ screen, onScreenChange }: HeaderProps) {
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center">
-            <span className="text-white font-bold text-sm">P</span>
+            <span className="text-white font-bold text-sm">W</span>
           </div>
           <div>
             <h1 className="text-lg font-semibold text-text-primary leading-tight">
-              PlanTogether
+              WithGeX
             </h1>
             <p className="text-xs text-text-tertiary leading-tight">
               Plan together. Human and agent.

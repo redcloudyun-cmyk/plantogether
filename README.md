@@ -1,18 +1,18 @@
-# PlanTogether
+# WithGeX
 
 **Plan together. Human and agent.**
 
-Built by [WithGex](https://github.com/redcloudyun-cmyk) for the OpenAI × Devpost WebMCP Challenge.
+Built for the OpenAI × Devpost WebMCP Challenge.
 
 ## What it is
 
-PlanTogether is a Kanban planning board where a human works on the board directly, and an AI agent reads and writes the **same live workspace** through [WebMCP](https://github.com/webmachinelearning/webmcp) (`document.modelContext`).
+WithGeX is a Human-Agent Collaboration Platform: a human works on a live planning workspace directly, and an AI agent reads and writes that **same live workspace** through [WebMCP](https://github.com/webmachinelearning/webmcp) (`document.modelContext`) — not a copy, not a chat transcript, the same board.
 
-It isn't a chat assistant that you copy-paste context into, and it isn't an agent that quietly edits a separate copy of your plan on a server somewhere. The human and the agent share one live board.
+It isn't a chat assistant you copy-paste context into, and it isn't an agent that quietly edits a separate copy of your plan on a server somewhere. The human and the agent share one live board, and the human keeps final authority over what actually changes.
 
 ## Why WebMCP
 
-PlanTogether does not give an agent a separate copy of the plan.
+WithGeX does not give an agent a separate copy of the plan.
 
 WebMCP exposes the same live workspace the human is actively editing.
 
@@ -29,11 +29,18 @@ Deployed automatically from `main` via GitHub Actions (`.github/workflows/deploy
 
 ## Human-Agent Collaboration
 
-Every card on the board shows who last touched it — **Human** or **Agent** — and agent-authored changes get a brief highlight animation so they're never a silent surprise. The two sides aren't equal by default, either: the human's intent stays authoritative (see [Human Control](#human-control)).
+Four screens, one shared live state:
+
+- **Dashboard** — today's Human vs. Agent activity, plan health, conflicts, and the critical path, computed live from the workspace (nothing hardcoded).
+- **Workspace** — the Kanban board, plus Plan Analysis, Critical Path, and any pending Agent Proposal, with Live Human Context / Context Scope / AI Permissions in the side rail.
+- **Activity** — the full Human + Agent session history, filterable and expandable per event.
+- **Settings** — WebMCP connection status, the registered tools, and the agent's autonomy level.
+
+Every card shows who last touched it — **Human** or **Agent** — and agent-authored changes get a brief highlight so they're never a silent surprise.
 
 ## Live Human Context
 
-The sidebar's **Live Human Context** panel always shows exactly what the human currently has selected — status, due date, owner — and updates the instant the selection changes.
+The **Live Human Context** panel always shows exactly what the human currently has selected — status, due date, owner, lock state — and updates the instant the selection changes.
 
 When the agent calls `get_current_focus`, it gets that same card back. It isn't reading a snapshot of "the project" in the abstract; it's picking up the exact thing the human is looking at right now, with no extra explanation required.
 
@@ -45,61 +52,96 @@ Registered live via `document.modelContext.registerTool(...)` — no mocking:
 |---|---|---|
 | `get_workspace_state` | read | Full board state: every item, status, owner, due date, lock, dependencies, current selection |
 | `get_current_focus` | read | The item the human currently has selected |
-| `add_item` | write | Create a new planning item |
-| `update_item` | write | Edit an existing item (blocked on locked items — see below) |
-| `analyze_plan` | read | Structured breakdown of the plan: grouped by status, locked items, dependency/blocked items — a starting point before calling `update_item` |
+| `add_item` | write | Create a new planning item — always low-risk, applies immediately (unless the human has set the agent to Observe mode) |
+| `update_item` | write | Edit an existing item. Blocked outright on locked items. Otherwise routed by risk (see below) |
+| `analyze_plan` | read | Structured breakdown of the plan: status groups, locked/blocked items, schedule conflicts, and the critical path |
 
 All write results follow a consistent shape (`{ success, reason?, message? }`) with a fixed set of reason codes: `TITLE_REQUIRED`, `ITEM_ID_REQUIRED`, `ITEM_NOT_FOUND`, `INVALID_STATUS`, `INVALID_DATE_FORMAT`, `ITEM_LOCKED_BY_HUMAN`, `DEPENDENCIES_INCOMPLETE`.
 
-## Human Control
+## Human Authority
 
-### Lock
+### Lock beats everything
 
 > Human establishes constraints. Agent works within them.
 
-A human can lock any card from the board UI. Locking is a **human-only** action — there is no `lock_item` WebMCP tool, so the agent can never lock or unlock a card itself. Once locked, every write path (`update_item`, and the board's own drag-and-drop) rejects agent edits with `ITEM_LOCKED_BY_HUMAN`.
+A human can lock any card from the board UI. Locking is a **human-only** action — there's no `lock_item` WebMCP tool, so the agent can never lock or unlock a card itself. A locked item rejects every agent write with `ITEM_LOCKED_BY_HUMAN`, regardless of autonomy level.
+
+### Risk-based Agent Proposals
+
+Not every agent edit applies immediately. Each `update_item` call is classified by risk (`src/lib/risk.ts`):
+
+| Risk | Fields |
+|---|---|
+| Low | title, description, owner |
+| Medium | due date, status |
+| High | dependencies |
+
+...and routed by the current **autonomy level** (Settings screen, default **Assist**):
+
+| Autonomy | Low risk | Medium risk | High risk |
+|---|---|---|---|
+| Observe | blocked | blocked | blocked |
+| Assist | auto-apply | → Proposal | → Proposal |
+| Autonomous | auto-apply | auto-apply | → Proposal |
+
+A change that isn't auto-applied becomes a **Proposal**: it shows up in the Workspace's Agent Proposal panel with a before/after diff and the agent's stated reason, and only takes effect once a human accepts it (in full or per-change, via "Review Individually").
 
 ### Dependency Blocking
 
-An item can't be moved to Done while any of its dependencies are still incomplete — enforced in the store, not just the UI, so it applies equally to a human drag-and-drop and an agent's `update_item` call. Blocked cards show a "⛔ Blocked by N" badge.
+An item can't be moved to Done while any of its dependencies are still incomplete — enforced in the store, not just the UI, so it applies equally to a human drag-and-drop and an agent's `update_item` call.
 
 ### Revert
 
 Agent changes are immediately visible and independently reversible by the human.
 
-Every time the agent edits a card, PlanTogether snapshots what it looked like just before. An "↩ Revert" button appears on that card — visible and clickable only by the human — that restores the pre-edit state in one click. There's no agent-facing "undo" tool; reverting is exclusively a human action.
+Every time the agent edits a card, WithGeX snapshots what it looked like just before. An "↩ Revert" button appears on that card — visible and clickable only by the human — that restores the pre-edit state in one click. There's no agent-facing "undo" tool; reverting is exclusively a human action.
 
 ## Architecture
 
 ```
-                    HUMAN
-                      │
-        select / drag / edit / lock
-                      │
-                      ▼
-            LIVE WORKSPACE STATE  (Zustand store)
-                      │
-            document.modelContext
-                      │
-                      ▼
-                    AGENT
-                      │
-        ┌─────────────┼──────────────┐
-        ▼             ▼              ▼
-     READ          CREATE          UPDATE
-     context        work            plan
-        │             │              │
-        └─────────────┼──────────────┘
-                      ▼
-              SAME LIVE BOARD
-                      │
-         Human sees changes instantly
-                      │
-               ┌───────┴───────┐
-               ▼               ▼
-             LOCK            REVERT
-               │               │
-               └────── HUMAN ──┘
+                         HUMAN
+                           │
+                 select / edit / drag / lock
+                           │
+                           ▼
+                  LIVE WORKSPACE STORE
+                           │
+            ┌──────────────┼──────────────┐
+            ▼              ▼              ▼
+         CONTEXT        PLAN GRAPH      ACTIVITY
+            │              │              │
+            └──────────────┼──────────────┘
+                           ▼
+                document.modelContext
+                           │
+                           ▼
+                          AGENT
+                           │
+               ┌───────────┼───────────┐
+               ▼           ▼           ▼
+             READ       ANALYZE       ACT
+               │           │           │
+               └───────────┼───────────┘
+                           ▼
+                    RISK CLASSIFIER
+                           │
+              ┌────────────┴────────────┐
+              ▼                         ▼
+            SAFE                    IMPORTANT
+              │                         │
+          AUTO APPLY                  PROPOSAL
+                                         │
+                                  HUMAN APPROVAL
+                                  │            │
+                               APPLY        REJECT
+                                  │
+                                  ▼
+                           LIVE WORKSPACE
+                                  │
+                             DIFF / REVERT
+                                  │
+                                  ▼
+                           SESSION HISTORY
 ```
 
 The UI and the WebMCP tools both read and write the same Zustand store (`src/store/workspaceStore.ts`) — there is no separate agent-facing data layer. State persists to `localStorage` so a refresh doesn't lose the board.
@@ -114,7 +156,9 @@ WebMCP is currently available behind a Chrome experimental flag:
 chrome://flags/#enable-webmcp-testing
 ```
 
-With the flag on, open the app, then drive it from an MCP-capable agent/client pointed at the page's `document.modelContext`. Without the flag (or in an unsupported browser), the app still works fully as a normal Kanban board — the header shows "WebMCP Unavailable" and the tools simply aren't registered, per the fallback in `src/webmcp/registerTools.ts`.
+With the flag on, open the app, then drive it from an MCP-capable agent/client pointed at the page's `document.modelContext`. Without the flag (or in an unsupported browser), the app still works fully as a normal Kanban board — Header/Settings show "WebMCP Unavailable" and the tools simply aren't registered, per the fallback in `src/webmcp/registerTools.ts`.
+
+To exercise the tools without a real MCP client, inject a mock before the page loads (e.g. via Playwright's `addInitScript`) that implements `document.modelContext.registerTool`, capture the registered tools, and call their `execute(args)` functions directly — this is how the project's own end-to-end verification works.
 
 ## Local Development
 
@@ -128,13 +172,17 @@ npm test          # vitest (store + component tests)
 
 ## Challenge Demo Flow
 
-A ~90 second walkthrough of the concept:
+A ~90–150 second walkthrough:
 
-1. **Live Human Context** — select "Record demo" on the board; the sidebar updates instantly. Ask the agent to continue planning from what's selected; it calls `get_current_focus` and `get_workspace_state`.
-2. **Agent creates work** — the agent calls `add_item`; the new card appears on the board immediately, and shows up in WebMCP Live Activity.
-3. **Human override** — the human changes a card's due date and locks another card.
-4. **Agent reconciles** — asked to rebalance the plan, the agent calls `analyze_plan` then `update_item` for each change. The locked card's update is rejected with `ITEM_LOCKED_BY_HUMAN`.
-5. **Human reverts** — the human clicks "↩ Revert" on one of the agent's changes; it's undone instantly.
+1. **Dashboard** — Plan Health, WebMCP connection status, today's Human vs. Agent activity.
+2. **Human Focus** — select a card in Workspace; Live Human Context updates instantly.
+3. **WebMCP Read** — the agent calls `get_current_focus` and `get_workspace_state`, visible immediately in Activity.
+4. **Conflict** — the human edits a due date that creates a schedule conflict; Plan Health flags it.
+5. **Agent Analysis** — the agent calls `analyze_plan`, then proposes fixes via `update_item`.
+6. **Human Approval** — the human reviews and applies (or rejects) the proposal in the Workspace's Agent Proposal panel.
+7. **Human Authority** — the human locks a card; a further agent edit is rejected with `ITEM_LOCKED_BY_HUMAN`.
+8. **Revert** — the human clicks "↩ Revert" on one of the agent's changes.
+9. **Activity** — the full session history proves the whole loop happened.
 
 ## License
 

@@ -62,7 +62,7 @@ export async function registerWebMCPTools(): Promise<() => void> {
     return () => {};
   }
 
-  console.log('[WebMCP] Registering PlanTogether tools...');
+  console.log('[WebMCP] Registering WithGeX tools...');
   store.getState().setWebmcpAvailable(true);
 
   const controller = new AbortController();
@@ -75,7 +75,7 @@ export async function registerWebMCPTools(): Promise<() => void> {
         name: 'get_workspace_state',
         title: 'Get Workspace State',
         description:
-          'Returns the current live state of the PlanTogether planning workspace, including all items with their statuses, due dates, owners, lock states, dependencies, and the item currently selected/focused by the human user. Use this to understand the full context of the workspace before making changes.',
+          'Returns the current live state of the WithGeX planning workspace, including all items with their statuses, due dates, owners, lock states, dependencies, and the item currently selected/focused by the human user. Use this to understand the full context of the workspace before making changes.',
         annotations: { readOnlyHint: true },
         inputSchema: {
           type: 'object',

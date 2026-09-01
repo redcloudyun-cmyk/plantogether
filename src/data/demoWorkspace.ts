@@ -91,7 +91,7 @@ const demoItems: PlanItem[] = [
 
 export const demoWorkspace: Workspace = {
   id: 'workspace_1',
-  title: 'PlanTogether — WebMCP Challenge',
+  title: 'WithGeX — WebMCP Challenge',
   items: demoItems,
   selectedItemId: null,
   updatedAt: now,
