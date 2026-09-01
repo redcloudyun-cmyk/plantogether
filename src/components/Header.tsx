@@ -1,6 +1,6 @@
-import { useState } from 'react';
 import { useWorkspaceStore } from '../store/workspaceStore';
 import type { AutonomyMode } from '../types/workspace';
+import ResetDemoButton from './ResetDemoButton';
 
 const AUTONOMY_MODES: { id: AutonomyMode; label: string; hint: string }[] = [
   { id: 'observe', label: 'Observe', hint: 'Agent can read the workspace but cannot make any changes.' },
@@ -8,24 +8,20 @@ const AUTONOMY_MODES: { id: AutonomyMode; label: string; hint: string }[] = [
   { id: 'autonomous', label: 'Autonomous', hint: 'Low & medium-risk edits apply automatically. Only high-risk changes (dependencies) need your approval.' },
 ];
 
+export type ScreenId = 'dashboard' | 'workspace' | 'activity' | 'settings';
+const SCREENS: ScreenId[] = ['dashboard', 'workspace', 'activity', 'settings'];
+
 interface HeaderProps {
-  screen: 'dashboard' | 'workspace';
-  onScreenChange: (screen: 'dashboard' | 'workspace') => void;
+  screen: ScreenId;
+  onScreenChange: (screen: ScreenId) => void;
 }
 
 export default function Header({ screen, onScreenChange }: HeaderProps) {
   const title = useWorkspaceStore((s) => s.title);
   const webmcpAvailable = useWorkspaceStore((s) => s.webmcpAvailable);
-  const resetWorkspace = useWorkspaceStore((s) => s.resetWorkspace);
   const autonomyMode = useWorkspaceStore((s) => s.autonomyMode);
   const setAutonomyMode = useWorkspaceStore((s) => s.setAutonomyMode);
   const pendingCount = useWorkspaceStore((s) => s.proposals.filter((p) => p.status === 'pending').length);
-  const [confirmOpen, setConfirmOpen] = useState(false);
-
-  const handleReset = () => {
-    resetWorkspace();
-    setConfirmOpen(false);
-  };
 
   return (
     <header className="bg-surface border-b border-border px-6 py-4 flex items-center justify-between">
@@ -47,7 +43,7 @@ export default function Header({ screen, onScreenChange }: HeaderProps) {
         <span className="text-sm text-text-secondary font-medium">{title}</span>
 
         <div className="flex items-center bg-surface-secondary rounded-full border border-border p-0.5 ml-3">
-          {(['dashboard', 'workspace'] as const).map((s) => (
+          {SCREENS.map((s) => (
             <button
               key={s}
               onClick={() => onScreenChange(s)}
@@ -88,13 +84,7 @@ export default function Header({ screen, onScreenChange }: HeaderProps) {
           ))}
         </div>
 
-        <button
-          onClick={() => setConfirmOpen(true)}
-          className="text-xs text-text-tertiary hover:text-text-secondary transition-colors px-2 py-1 rounded hover:bg-surface-secondary"
-          title="Reset to demo data"
-        >
-          Reset Demo
-        </button>
+        <ResetDemoButton />
         <div className="flex items-center gap-2">
           <div
             className={`w-2 h-2 rounded-full ${
@@ -111,37 +101,6 @@ export default function Header({ screen, onScreenChange }: HeaderProps) {
           <span className="text-xs font-medium text-agent">Agent</span>
         </div>
       </div>
-
-      {confirmOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-[2px] animate-fade-in"
-          onClick={() => setConfirmOpen(false)}
-        >
-          <div
-            className="bg-surface rounded-xl border border-border shadow-xl w-full max-w-sm p-6 animate-slide-in"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h2 className="text-sm font-semibold text-text-primary mb-1">Reset demo workspace?</h2>
-            <p className="text-xs text-text-secondary mb-4">
-              This clears every card, lock, activity entry, and pending proposal back to the starting demo state.
-            </p>
-            <div className="flex justify-end gap-2">
-              <button
-                onClick={() => setConfirmOpen(false)}
-                className="px-4 py-2 text-sm text-text-secondary hover:text-text-primary transition-colors rounded-lg hover:bg-surface-secondary"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleReset}
-                className="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors"
-              >
-                Reset
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </header>
   );
 }

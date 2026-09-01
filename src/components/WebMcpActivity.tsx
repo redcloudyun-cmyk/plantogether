@@ -1,21 +1,12 @@
 import { useEffect, useRef } from 'react';
 import { useWorkspaceStore } from '../store/workspaceStore';
-import type { ActivityLogEntry } from '../types/workspace';
+import { getActivityIcon } from '../lib/activityIcon';
 
-const READ_TOOLS = new Set(['get_workspace_state', 'get_current_focus', 'analyze_plan']);
-
-function getIcon(entry: ActivityLogEntry): { icon: string; className: string } {
-  if (entry.status === 'blocked' || entry.status === 'error') {
-    return { icon: '✗', className: 'text-red-500' };
-  }
-  if (entry.source === 'webmcp') {
-    const isRead = entry.toolName ? READ_TOOLS.has(entry.toolName) : false;
-    return { icon: isRead ? '→' : '✦', className: 'text-agent' };
-  }
-  return { icon: '✓', className: 'text-green-500' };
+interface WebMcpActivityProps {
+  onViewAll?: () => void;
 }
 
-export default function WebMcpActivity() {
+export default function WebMcpActivity({ onViewAll }: WebMcpActivityProps) {
   const activityLog = useWorkspaceStore((s) => s.activityLog);
   const endRef = useRef<HTMLDivElement>(null);
 
@@ -25,9 +16,19 @@ export default function WebMcpActivity() {
 
   return (
     <div className="px-4 py-3 flex flex-col h-full min-h-0">
-      <h3 className="text-xs font-semibold text-text-secondary tracking-wide mb-2 flex-shrink-0">
-        WEBMCP LIVE ACTIVITY
-      </h3>
+      <div className="flex items-center justify-between flex-shrink-0 mb-2">
+        <h3 className="text-xs font-semibold text-text-secondary tracking-wide">
+          WEBMCP LIVE ACTIVITY
+        </h3>
+        {onViewAll && activityLog.length > 0 && (
+          <button
+            onClick={onViewAll}
+            className="text-[10px] font-medium text-primary-600 hover:text-primary-700"
+          >
+            View All →
+          </button>
+        )}
+      </div>
 
       {activityLog.length === 0 ? (
         <p className="text-xs text-text-tertiary">
@@ -36,7 +37,7 @@ export default function WebMcpActivity() {
       ) : (
         <div className="flex flex-col gap-2.5 overflow-y-auto min-h-0">
           {activityLog.map((entry) => {
-            const { icon, className } = getIcon(entry);
+            const { icon, className } = getActivityIcon(entry);
             const lines = entry.detail.split('\n');
             return (
               <div key={entry.id} className="flex items-start gap-2 text-xs animate-slide-in">
