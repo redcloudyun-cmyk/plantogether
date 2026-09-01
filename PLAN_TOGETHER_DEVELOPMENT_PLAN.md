@@ -9,7 +9,7 @@
 
 > **v1.1 → v1.4 전환 (2026-09-01)**: v1.1(단일 Kanban 화면, 5 tools, Reset Demo)은 완료·배포되어 있음. v1.4는 이를 4-screen 제품(Dashboard/Workspace/Activity/Settings)으로 확장하고, 이번 버전의 핵심 신규 기능인 **Agent Proposal / Human Approval** 워크플로우, Risk Classification, Plan Health, Conflict Detection, Critical Path를 추가한다. 아래 내용은 v1.4 원본 계획서를 기준으로 재정리한 것이며, 진행 상황은 문서 하단 "구현 상태" 절 참고.
 >
-> **병행 세션 합류 (2026-09-01)**: 같은 저장소에서 다른 Claude 세션(Antigravity IDE)이 동시에 Proposal/Approval·Risk 기반 Autonomy·Plan Health/Conflict Detection/Critical Path/Dashboard를 독립적으로 구현했음. 중복 확인 후 `feature/agent-proposal-approval` 브랜치를 리뷰(tsc/lint/vitest 33개/build/Playwright 통과)하고 `main`에 머지함(커밋 `8353911`). 이 세션에서 진행 중이던 동일 범위의 미완성 구현은 폐기하고, 이 문서와 데모 데이터셋만 선별적으로 이어받음. 이제부터는 병합된 코드 기준으로 Activity 화면과 Settings/WebMCP 화면 등 남은 항목을 이어간다.
+> **병행 세션 합류 (2026-09-01)**: 같은 저장소에서 다른 Claude 세션(Antigravity IDE)이 동시에 Proposal/Approval·Risk 기반 Autonomy·Plan Health/Conflict Detection/Critical Path/Dashboard를 독립적으로 구현했음. 중복 확인 후 `feature/agent-proposal-approval` 브랜치를 리뷰(tsc/lint/vitest 33개/build/Playwright 통과)하고 `main`에 머지함(커밋 `8353911`). 이 세션에서 진행 중이던 동일 범위의 미완성 구현은 폐기하고, 이 문서와 데모 데이터셋만 선별적으로 이어받음. 이어서 이 세션이 Activity 화면과 Settings/WebMCP 화면을 병합된 코드 위에 추가 구현함(커밋 `60f015b`). P0~P2 대부분 완료 — 남은 것은 Test Gate/Judge Access Test 수행과 데모 리허설뿐. 자세한 내용은 문서 하단 "43. 구현 상태" 참고.
 
 ---
 
@@ -807,14 +807,14 @@ PlanTogether는 다음 세 가지 시각을 동시에 만족해야 한다.
 
 ## P1 — Core Product
 
-- [ ] 4-screen shell (Dashboard / Workspace / Activity / Settings) + sidebar navigation — 현재는 Header의 Dashboard/Workspace 2-tab 토글뿐, Activity/Settings 전용 화면 없음
+- [x] 4-screen shell (Dashboard / Workspace / Activity / Settings) — Header의 4-tab 토글로 구현 (별도 사이드바는 아님, 기존 Header 패턴을 확장)
 - [x] Dashboard 화면 (`src/components/Dashboard.tsx`) — Today's Collaboration / Plan Health / Agent 카드, Conflicts 목록, Critical Path, 전부 실제 store 계산값
 - [x] Workspace 화면 (기존 Board + 우측 레일: Live Human Context + WebMCP Live Activity)
 - [x] Live Human Context — v1.1에서 완료
 - [ ] What AI Sees 패널 — 미구현 (P2 Context Sharing Controls와 함께 보류)
 - [ ] AI Permissions 패널 — 미구현 (독립 패널은 없음; Risk 정보는 Proposal 카드/Activity 로그에 노출됨)
-- [ ] Activity 화면 — 아직 우측 레일의 WebMCP Live Activity 패널뿐. All/Human/Agent/Blocked/Proposal 필터와 Activity Detail을 갖춘 전용 화면 필요
-- [ ] Settings / WebMCP 화면 — 아직 없음. Autonomy 토글은 Header에 있음(§19), 별도 화면으로 옮기거나 재사용 필요
+- [x] Activity 화면 (`ActivityScreen.tsx`) — All/Human/Agent/Blocked/Proposals 필터, 행 클릭 시 Actor/Tool/Result/Detail 펼침, 실제 activityLog 기반 요약 스탯
+- [x] Settings / WebMCP 화면 (`SettingsScreen.tsx`) — 연결 상태, 5개 Tool 목록, Autonomy 선택(Header 토글과 동일 store 액션 공유), Context/Restricted 목록, Reset Demo
 - [x] Lock / Dependency / Revert / Reset — v1.1에서 완료
 
 ## P1+ — Competitive Depth
@@ -832,6 +832,6 @@ PlanTogether는 다음 세 가지 시각을 동시에 만족해야 한다.
 - [x] Action Risk Level 노출 — Proposal 카드의 Risk 배지, Dashboard 미노출은 아님
 - [x] Partial Proposal Approval — ProposalModal의 "Review Individually"
 - [ ] Context Sharing Controls (토글) — 미구현 (What AI Sees와 함께 보류, 우선순위 최하위로 유지하기로 함)
-- [ ] Activity Detail 뷰 — Activity 화면 자체가 아직 없어 함께 보류
+- [x] Activity Detail 뷰 — ActivityScreen 각 행 클릭 시 인라인으로 펼쳐짐 (별도 페이지/모달은 아님)
 
-> **2026-09-01 기준 남은 작업 (우선순위 순)**: 1) Activity 화면(필터 + Detail), 2) Settings/WebMCP 화면, 3) Test Gate(§37) 체크리스트 + Judge Access Test(§38) 실제 수행, 4) 데모 스크립트(§36) 리허설. Context Scope 토글(§9)과 What AI Sees/AI Permissions 패널은 최하위 우선순위로 남겨둔다.
+> **2026-09-01 기준 남은 작업 (우선순위 순)**: 1) Test Gate(§37) 체크리스트 + Judge Access Test(§38) 실제 수행, 2) 데모 스크립트(§36) 리허설 및 타이밍 확인. Context Scope 토글(§9)과 What AI Sees/AI Permissions 패널은 최하위 우선순위로 남겨둔다 — Risk 정보 자체는 Proposal 카드와 Activity 로그에 이미 노출되어 있음.
