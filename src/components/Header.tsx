@@ -8,7 +8,12 @@ const AUTONOMY_MODES: { id: AutonomyMode; label: string; hint: string }[] = [
   { id: 'autonomous', label: 'Autonomous', hint: 'Low & medium-risk edits apply automatically. Only high-risk changes (dependencies) need your approval.' },
 ];
 
-export default function Header() {
+interface HeaderProps {
+  screen: 'dashboard' | 'workspace';
+  onScreenChange: (screen: 'dashboard' | 'workspace') => void;
+}
+
+export default function Header({ screen, onScreenChange }: HeaderProps) {
   const title = useWorkspaceStore((s) => s.title);
   const webmcpAvailable = useWorkspaceStore((s) => s.webmcpAvailable);
   const resetWorkspace = useWorkspaceStore((s) => s.resetWorkspace);
@@ -40,6 +45,22 @@ export default function Header() {
         </div>
         <span className="text-text-tertiary mx-2">·</span>
         <span className="text-sm text-text-secondary font-medium">{title}</span>
+
+        <div className="flex items-center bg-surface-secondary rounded-full border border-border p-0.5 ml-3">
+          {(['dashboard', 'workspace'] as const).map((s) => (
+            <button
+              key={s}
+              onClick={() => onScreenChange(s)}
+              className={`px-3 py-1 text-xs font-medium rounded-full capitalize transition-colors ${
+                screen === s
+                  ? 'bg-surface text-text-primary shadow-sm border border-border'
+                  : 'text-text-tertiary hover:text-text-secondary'
+              }`}
+            >
+              {s}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="flex items-center gap-4">
