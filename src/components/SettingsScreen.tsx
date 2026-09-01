@@ -1,6 +1,7 @@
 import { useWorkspaceStore } from '../store/workspaceStore';
 import type { AutonomyMode } from '../types/workspace';
 import ResetDemoButton from './ResetDemoButton';
+import { useLanguageStore, useTranslation, type Language } from '../i18n';
 
 const TOOLS = [
   { name: 'get_workspace_state', description: 'Read the full board — every item, status, owner, due date, lock, dependencies.' },
@@ -29,10 +30,21 @@ export default function SettingsScreen() {
   const webmcpAvailable = useWorkspaceStore((s) => s.webmcpAvailable);
   const autonomyMode = useWorkspaceStore((s) => s.autonomyMode);
   const setAutonomyMode = useWorkspaceStore((s) => s.setAutonomyMode);
+  const language = useLanguageStore((s) => s.language);
+  const setLanguage = useLanguageStore((s) => s.setLanguage);
+  const { t } = useTranslation();
 
   return (
     <div className="flex-1 overflow-y-auto p-6">
       <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <Card title={t('language').toUpperCase()}>
+          <label className="block text-xs text-text-tertiary mb-2" htmlFor="language-select">{t('language')}</label>
+          <select id="language-select" value={language} onChange={(event) => setLanguage(event.target.value as Language)} className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm">
+            <option value="en">{t('english')}</option>
+            <option value="ko">{t('korean')}</option>
+          </select>
+          <p className="text-xs text-text-tertiary mt-3">English is the default language for the hackathon demo.</p>
+        </Card>
         <Card title="WEBMCP STATUS">
           <div className="flex items-center gap-2">
             <div className={`w-2.5 h-2.5 rounded-full ${webmcpAvailable ? 'bg-green-500' : 'bg-text-tertiary'}`} />

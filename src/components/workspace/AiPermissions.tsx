@@ -1,6 +1,7 @@
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { decideAutonomyAction } from '../../lib/risk';
 import type { RiskLevel } from '../../types/workspace';
+import { useTranslation, type TranslationKey } from '../../i18n';
 
 type PolicyLabel = 'Allowed' | 'Auto Apply' | 'Ask' | 'Require Approval' | 'Blocked';
 
@@ -24,11 +25,11 @@ function policyLabel(action: ReturnType<typeof decideAutonomyAction>): PolicyLab
   return 'Require Approval';
 }
 
-function Row({ label, value }: { label: string; value: PolicyLabel }) {
+function Row({ label, value, translatedValue }: { label: string; value: PolicyLabel; translatedValue: string }) {
   return (
     <div className="flex items-center justify-between text-xs">
       <span className="text-text-primary">{label}</span>
-      <span className={`font-medium px-1.5 py-0.5 rounded ${COLOR[value]}`}>{value}</span>
+      <span className={`font-medium px-1.5 py-0.5 rounded ${COLOR[value]}`}>{translatedValue}</span>
     </div>
   );
 }
@@ -36,21 +37,23 @@ function Row({ label, value }: { label: string; value: PolicyLabel }) {
 export default function AiPermissions() {
   const autonomyMode = useWorkspaceStore((s) => s.autonomyMode);
   const blocked = autonomyMode === 'observe';
+  const { t } = useTranslation();
+  const valueText = (value: PolicyLabel) => t(({ Allowed: 'allowed', 'Auto Apply': 'autoApply', Ask: 'requireApproval', 'Require Approval': 'requireApproval', Blocked: 'blocked' } as Record<PolicyLabel, TranslationKey>)[value]);
 
   return (
     <div className="px-4 py-3 flex-shrink-0">
       <h3 className="text-xs font-semibold text-text-secondary tracking-wide mb-3">
-        AI PERMISSIONS
+        {t('aiPermissions')}
       </h3>
 
       <div className="flex flex-col gap-1.5">
-        <Row label="Read workspace" value="Allowed" />
-        <Row label="Create item" value={blocked ? 'Blocked' : 'Auto Apply'} />
+        <Row label={t('readWorkspace')} value="Allowed" translatedValue={valueText('Allowed')} />
+        <Row label={t('createItem')} value={blocked ? 'Blocked' : 'Auto Apply'} translatedValue={valueText(blocked ? 'Blocked' : 'Auto Apply')} />
         {RISK_ROWS.map((r) => (
-          <Row key={r.risk} label={r.label} value={policyLabel(decideAutonomyAction(autonomyMode, r.risk))} />
+          <Row key={r.risk} label={t(r.risk === 'low' ? 'updateLow' : r.risk === 'medium' ? 'updateMedium' : 'updateHigh')} value={policyLabel(decideAutonomyAction(autonomyMode, r.risk))} translatedValue={valueText(policyLabel(decideAutonomyAction(autonomyMode, r.risk)))} />
         ))}
-        <Row label="Delete" value="Blocked" />
-        <Row label="Lock / unlock" value="Blocked" />
+        <Row label={t('delete')} value="Blocked" translatedValue={valueText('Blocked')} />
+        <Row label={t('lockUnlock')} value="Blocked" translatedValue={valueText('Blocked')} />
       </div>
     </div>
   );

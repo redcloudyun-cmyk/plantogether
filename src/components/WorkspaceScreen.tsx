@@ -6,6 +6,7 @@ import AiPermissions from './workspace/AiPermissions';
 import PlanAnalysisCard from './workspace/PlanAnalysisCard';
 import CriticalPathCard from './workspace/CriticalPathCard';
 import AgentProposalPanel from './workspace/AgentProposalPanel';
+import AgentMissionCard from './workspace/AgentMissionCard';
 
 export default function WorkspaceScreen() {
   return (
@@ -19,6 +20,7 @@ export default function WorkspaceScreen() {
             <CriticalPathCard />
           </div>
 
+          <AgentMissionCard />
           <AgentProposalPanel />
         </div>
       </div>

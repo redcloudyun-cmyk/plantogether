@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { useWorkspaceStore } from './workspaceStore';
+import { migratePersistedWorkspace, useWorkspaceStore } from './workspaceStore';
 
 beforeEach(() => {
   useWorkspaceStore.setState({
@@ -35,6 +35,68 @@ describe('context scope', () => {
     });
     useWorkspaceStore.getState().toggleContextScope('activityHistory');
     expect(useWorkspaceStore.getState().contextScope.activityHistory).toBe(true);
+  });
+});
+
+describe('shared current focus', () => {
+  it('returns the exact item selected by the human', () => {
+    const selected = useWorkspaceStore.getState().addItem({
+      title: 'Record Demo', owner: 'Emily Johnson', priority: 'high', dependencies: [],
+    });
+    useWorkspaceStore.getState().selectItem(selected.id);
+
+    expect(useWorkspaceStore.getState().getSelectedItem()).toEqual(
+      useWorkspaceStore.getState().items.find((item) => item.id === selected.id)
+    );
+  });
+});
+
+describe('persisted workspace migration', () => {
+  it('backfills new fields and removes retired demo branding safely', () => {
+    const legacy = {
+      title: 'PlanTogether Demo',
+      items: [{
+        id: 'legacy', title: 'Legacy task', status: 'planned', owner: 'Mina Park', locked: false,
+        dependencies: [], createdBy: 'human', updatedBy: 'human', createdAt: '2026-01-01', updatedAt: '2026-01-01',
+      }],
+      contextScope: { activityHistory: true },
+    };
+
+    const migrated = migratePersistedWorkspace(legacy);
+
+    expect(migrated.title).toBe('WithGeX Demo');
+    expect(migrated.items?.[0]).toMatchObject({ priority: 'medium', owner: 'Emily Johnson' });
+    expect(migrated.contextScope).toMatchObject({ currentItem: true, activityHistory: true, teamInformation: false });
+  });
+
+  it('handles invalid persisted values without throwing', () => {
+    expect(migratePersistedWorkspace(null)).toEqual({});
+    expect(migratePersistedWorkspace('invalid')).toEqual({});
+    expect(migratePersistedWorkspace({ contextScope: {} })).not.toHaveProperty('title');
+    expect(migratePersistedWorkspace({ contextScope: {} })).not.toHaveProperty('items');
+  });
+});
+
+describe('resetWorkspace', () => {
+  it('restores a complete, executable demo state', () => {
+    useWorkspaceStore.setState({
+      items: [], proposals: [], autonomyMode: 'observe',
+      contextScope: {
+        currentItem: false, boardState: false, dependencies: false, planStatus: false,
+        activityHistory: true, completedItems: true, teamInformation: true,
+      },
+    });
+
+    useWorkspaceStore.getState().resetWorkspace();
+    const state = useWorkspaceStore.getState();
+
+    expect(state.items.length).toBeGreaterThanOrEqual(6);
+    expect(state.items.every((item) => item.priority && item.owner === 'Emily Johnson')).toBe(true);
+    expect(state.items.some((item) => item.locked)).toBe(true);
+    expect(state.items.some((item) => item.dependencies.length > 0)).toBe(true);
+    expect(state.proposals).toEqual([]);
+    expect(state.autonomyMode).toBe('assist');
+    expect(state.contextScope).toMatchObject({ currentItem: true, activityHistory: false });
   });
 });
 

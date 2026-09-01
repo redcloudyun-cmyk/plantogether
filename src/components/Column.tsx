@@ -2,6 +2,7 @@ import { useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import type { PlanItem, ItemStatus } from '../types/workspace';
 import PlanCard from './PlanCard';
+import { useTranslation } from '../i18n';
 
 interface ColumnProps {
   id: ItemStatus;
@@ -20,6 +21,7 @@ const columnColors: Record<ItemStatus, string> = {
 
 export default function Column({ id, title, items, onEditCard, onAddCard }: ColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id });
+  const { t } = useTranslation();
 
   return (
     <div
@@ -60,7 +62,7 @@ export default function Column({ id, title, items, onEditCard, onAddCard }: Colu
 
         {items.length === 0 && (
           <div className="flex-1 flex items-center justify-center min-h-[80px]">
-            <p className="text-xs text-text-tertiary">No items</p>
+            <p className="text-xs text-text-tertiary">{t('noItems')}</p>
           </div>
         )}
         <button onClick={() => onAddCard(id)} className="mt-auto w-full rounded-md border border-border bg-white py-2 text-xs text-text-secondary hover:text-primary-600 hover:border-primary-300">

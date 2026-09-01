@@ -2,15 +2,13 @@ import { useMemo, useState } from 'react';
 import { useWorkspaceStore } from '../store/workspaceStore';
 import { getActivityIcon } from '../lib/activityIcon';
 import type { ActivityLogEntry } from '../types/workspace';
+import { useTranslation, type TranslationKey } from '../i18n';
 
 type FilterId = 'all' | 'human' | 'agent' | 'blocked' | 'proposals';
 
-const FILTERS: { id: FilterId; label: string }[] = [
-  { id: 'all', label: 'All' },
-  { id: 'human', label: 'Human' },
-  { id: 'agent', label: 'Agent' },
-  { id: 'blocked', label: 'Blocked' },
-  { id: 'proposals', label: 'Proposals' },
+const FILTERS: { id: FilterId; label: TranslationKey }[] = [
+  { id: 'all', label: 'all' }, { id: 'human', label: 'human' }, { id: 'agent', label: 'agentActionsFilter' },
+  { id: 'blocked', label: 'blocked' }, { id: 'proposals', label: 'proposalsFilter' },
 ];
 
 const PROPOSAL_ACTIONS = new Set(['Proposed', 'Applied', 'Rejected']);
@@ -44,6 +42,7 @@ function ActivityRow({ entry }: { entry: ActivityLogEntry }) {
   const [expanded, setExpanded] = useState(false);
   const { icon, className } = getActivityIcon(entry);
   const lines = entry.detail.split('\n');
+  const { t } = useTranslation();
 
   return (
     <div className="border-b border-border last:border-0">
@@ -67,21 +66,21 @@ function ActivityRow({ entry }: { entry: ActivityLogEntry }) {
       {expanded && (
         <div className="px-4 pb-3 pl-10 flex flex-col gap-1.5 text-xs">
           <div className="grid grid-cols-[80px_1fr] gap-x-2">
-            <span className="text-text-tertiary">Actor</span>
+            <span className="text-text-tertiary">{t('actor')}</span>
             <span className="text-text-primary">{SOURCE_LABEL[entry.source]}</span>
           </div>
           {entry.toolName && (
             <div className="grid grid-cols-[80px_1fr] gap-x-2">
-              <span className="text-text-tertiary">Tool</span>
+              <span className="text-text-tertiary">{t('tool')}</span>
               <span className="text-text-primary font-mono">{entry.toolName}</span>
             </div>
           )}
           <div className="grid grid-cols-[80px_1fr] gap-x-2">
-            <span className="text-text-tertiary">Result</span>
+            <span className="text-text-tertiary">{t('result')}</span>
             <span className="text-text-primary capitalize">{entry.status ?? 'success'}</span>
           </div>
           <div className="grid grid-cols-[80px_1fr] gap-x-2">
-            <span className="text-text-tertiary">Detail</span>
+            <span className="text-text-tertiary">{t('detail')}</span>
             <div className="text-text-primary flex flex-col">
               {lines.map((line, i) => (
                 <span key={i}>{line}</span>
@@ -106,6 +105,7 @@ function StatBox({ label, value }: { label: string; value: number }) {
 export default function ActivityScreen() {
   const activityLog = useWorkspaceStore((s) => s.activityLog);
   const [filter, setFilter] = useState<FilterId>('all');
+  const { t } = useTranslation();
 
   const filtered = useMemo(
     () => [...activityLog].reverse().filter((e) => matchesFilter(e, filter)),
@@ -145,7 +145,7 @@ export default function ActivityScreen() {
                   : 'text-text-tertiary hover:text-text-secondary'
               }`}
             >
-              {f.label}
+              {t(f.label)}
             </button>
           ))}
         </div>
@@ -154,8 +154,8 @@ export default function ActivityScreen() {
           {filtered.length === 0 ? (
             <p className="px-4 py-8 text-center text-sm text-text-tertiary">
               {activityLog.length === 0
-                ? 'No activity yet. Human and agent actions will appear here as they happen.'
-                : 'No events match this filter.'}
+                ? t('noActivity')
+                : t('noMatchingEvents')}
             </p>
           ) : (
             filtered.map((entry) => <ActivityRow key={entry.id} entry={entry} />)

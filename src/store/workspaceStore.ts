@@ -34,6 +34,33 @@ const DEFAULT_CONTEXT_SCOPE: Record<ContextScopeKey, boolean> = {
   teamInformation: false,
 };
 
+type PersistedWorkspace = Partial<Pick<WorkspaceState,
+  'id' | 'title' | 'items' | 'selectedItemId' | 'updatedAt' | 'proposals' | 'autonomyMode' | 'contextScope'
+>>;
+
+/** Normalizes data saved by earlier releases before it reaches live UI state. */
+export function migratePersistedWorkspace(persisted: unknown): PersistedWorkspace {
+  if (!persisted || typeof persisted !== 'object') return {};
+  const state = persisted as PersistedWorkspace;
+  const items = Array.isArray(state.items)
+    ? state.items.map((item) => ({
+        ...item,
+        priority: item.priority || 'medium',
+        owner: item.owner === 'Mina Park' ? 'Emily Johnson' : item.owner,
+        previousState: item.previousState
+          ? { ...item.previousState, priority: item.previousState.priority || item.priority || 'medium' }
+          : undefined,
+      }))
+    : undefined;
+
+  return {
+    ...state,
+    ...(state.title ? { title: state.title.replace(/PlanTogether/gi, 'WithGeX') } : {}),
+    ...(items ? { items } : {}),
+    contextScope: { ...DEFAULT_CONTEXT_SCOPE, ...(state.contextScope || {}) },
+  };
+}
+
 function getIncompleteDependencies(item: PlanItem, allItems: PlanItem[]): PlanItem[] {
   if (item.dependencies.length === 0) return [];
   return item.dependencies
@@ -481,6 +508,8 @@ export const useWorkspaceStore = create<WorkspaceState>()(
     }),
     {
       name: 'withgex-workspace',
+      version: 2,
+      migrate: (persistedState) => migratePersistedWorkspace(persistedState),
       partialize: (state) => ({
         id: state.id,
         title: state.title,

@@ -1,24 +1,23 @@
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import type { ContextScopeKey } from '../../types/workspace';
+import { useTranslation, type TranslationKey } from '../../i18n';
 
-const OPTIONS: { key: ContextScopeKey; label: string }[] = [
-  { key: 'currentItem', label: 'Current item' },
-  { key: 'boardState', label: 'Board state' },
-  { key: 'dependencies', label: 'Dependencies' },
-  { key: 'planStatus', label: 'Plan status' },
-  { key: 'activityHistory', label: 'Activity history' },
-  { key: 'completedItems', label: 'Completed items' },
-  { key: 'teamInformation', label: 'Team information' },
+const OPTIONS: { key: ContextScopeKey; label: TranslationKey }[] = [
+  { key: 'currentItem', label: 'currentItem' }, { key: 'boardState', label: 'boardState' },
+  { key: 'dependencies', label: 'dependencies' }, { key: 'planStatus', label: 'planStatus' },
+  { key: 'activityHistory', label: 'activityHistory' }, { key: 'completedItems', label: 'completedItems' },
+  { key: 'teamInformation', label: 'teamInformation' },
 ];
 
 export default function ContextScope() {
   const scope = useWorkspaceStore((state) => state.contextScope);
   const toggle = useWorkspaceStore((state) => state.toggleContextScope);
+  const { t } = useTranslation();
 
   return (
     <section className="px-4 py-3 border-b border-border flex-shrink-0" aria-labelledby="context-scope-heading">
       <h3 id="context-scope-heading" className="text-xs font-semibold text-text-secondary tracking-wide mb-3">
-        CONTEXT SCOPE (What AI Sees)
+        {t('contextScope')}
       </h3>
 
       <div className="flex flex-col gap-1">
@@ -43,7 +42,7 @@ export default function ContextScope() {
               >
                 {enabled ? '✓' : ''}
               </span>
-              <span className={enabled ? 'text-text-primary' : 'text-text-tertiary'}>{label}</span>
+              <span className={enabled ? 'text-text-primary' : 'text-text-tertiary'}>{t(label)}</span>
             </label>
           );
         })}

@@ -1,6 +1,8 @@
 import { useMemo } from 'react';
 import { useWorkspaceStore } from '../store/workspaceStore';
 import { computePlanHealth, detectConflicts, computeCriticalPath } from '../lib/planAnalysis';
+import AgentMissionCard from './workspace/AgentMissionCard';
+import { useTranslation } from '../i18n';
 
 const CONFLICT_ICONS: Record<string, string> = {
   schedule_conflict: '⚠',
@@ -37,6 +39,7 @@ export default function Dashboard({ onOpenWorkspace }: { onOpenWorkspace: () => 
   const proposals = useWorkspaceStore((s) => s.proposals);
   const webmcpAvailable = useWorkspaceStore((s) => s.webmcpAvailable);
   const autonomyMode = useWorkspaceStore((s) => s.autonomyMode);
+  const { t } = useTranslation();
 
   const health = useMemo(() => computePlanHealth(items), [items]);
   const conflicts = useMemo(() => detectConflicts(items), [items]);
@@ -54,23 +57,28 @@ export default function Dashboard({ onOpenWorkspace }: { onOpenWorkspace: () => 
 
   return (
     <div className="flex-1 overflow-y-auto p-6">
-      <div className="max-w-4xl mx-auto flex flex-col gap-4">
-        <div>
-          <h1 className="text-lg font-semibold text-text-primary">Dashboard</h1>
-          <p className="text-sm text-text-tertiary mt-0.5">Human-Agent collaboration summary — computed live from the workspace, not a fixed snapshot.</p>
+      <div className="max-w-7xl mx-auto flex flex-col gap-4">
+        <div className="flex items-center justify-between gap-4 rounded-xl border border-blue-100 bg-gradient-to-r from-blue-50 to-violet-50 p-5">
+          <div>
+            <p className="text-[10px] font-bold tracking-widest text-primary-600">{t('sharedWorkspace')}</p>
+            <h2 className="text-xl font-semibold text-text-primary mt-1">{t('sharedWorkspaceHeadline')}</h2>
+            <p className="text-sm text-text-secondary mt-1">{t('sharedWorkspaceBody')}</p>
+          </div>
+          <button onClick={onOpenWorkspace} className="flex-shrink-0 rounded-lg bg-primary-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-primary-700">{t('analyzeImprove')}</button>
         </div>
 
+        <AgentMissionCard />
         <div className="grid grid-cols-3 gap-4">
           {/* Today's Collaboration */}
           <div className="bg-surface rounded-xl border border-border p-4">
-            <h2 className="text-xs font-semibold text-text-secondary tracking-wide mb-2">TODAY'S COLLABORATION</h2>
-            <StatRow label="Human Actions" value={humanActions} emphasis="human" />
-            <StatRow label="Agent Actions" value={agentActions} emphasis="agent" />
+            <h2 className="text-xs font-semibold text-text-secondary tracking-wide mb-2">{t('todaysCollaboration')}</h2>
+            <StatRow label={t('humanActions')} value={humanActions} emphasis="human" />
+            <StatRow label={t('agentActions')} value={agentActions} emphasis="agent" />
             <div className="border-t border-border my-1.5" />
-            <StatRow label="Proposals" value={proposalsTotal} />
-            <StatRow label="Approved" value={approved} />
-            <StatRow label="Rejected" value={rejected} />
-            <StatRow label="Reverted" value={reverted} />
+            <StatRow label={t('proposals')} value={proposalsTotal} />
+            <StatRow label={t('approved')} value={approved} />
+            <StatRow label={t('rejected')} value={rejected} />
+            <StatRow label={t('reverted')} value={reverted} />
             {pending > 0 && (
               <p className="mt-2 text-xs text-agent bg-agent-light rounded-lg px-2 py-1.5">
                 {pending} proposal{pending === 1 ? '' : 's'} still awaiting approval
@@ -80,7 +88,7 @@ export default function Dashboard({ onOpenWorkspace }: { onOpenWorkspace: () => 
 
           {/* Plan Health */}
           <div className="bg-surface rounded-xl border border-border p-4">
-            <h2 className="text-xs font-semibold text-text-secondary tracking-wide mb-2">PLAN HEALTH</h2>
+            <h2 className="text-xs font-semibold text-text-secondary tracking-wide mb-2">{t('planHealth')}</h2>
             <div className="flex items-baseline gap-1 mb-3">
               <span className={`text-3xl font-bold ${healthColor}`}>{health.score}</span>
               <span className="text-sm text-text-tertiary">/ 100</span>
@@ -116,7 +124,7 @@ export default function Dashboard({ onOpenWorkspace }: { onOpenWorkspace: () => 
               onClick={onOpenWorkspace}
               className="w-full px-3 py-2 text-sm font-medium text-white bg-primary-600 rounded-lg hover:bg-primary-700 transition-colors"
             >
-              Open Workspace
+              {t('openWorkspace')}
             </button>
           </div>
         </div>
@@ -146,7 +154,7 @@ export default function Dashboard({ onOpenWorkspace }: { onOpenWorkspace: () => 
         {/* Critical path */}
         {criticalPath.size > 1 && (
           <div className="bg-surface rounded-xl border border-border p-4">
-            <h2 className="text-xs font-semibold text-text-secondary tracking-wide mb-3">CRITICAL PATH</h2>
+            <h2 className="text-xs font-semibold text-text-secondary tracking-wide mb-3">{t('criticalPath')}</h2>
             <div className="flex items-center flex-wrap gap-2 text-sm">
               {items
                 .filter((i) => criticalPath.has(i.id))
