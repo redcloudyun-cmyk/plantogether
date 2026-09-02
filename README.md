@@ -1,104 +1,158 @@
 # WithGeX
 
-**Plan together. Human and agent.**
+**One workspace. Human and agent. Working together.**
 
-Built for the OpenAI × Devpost WebMCP Challenge.
+WithGeX is a human-agent collaborative planning workspace built for the **OpenAI × Devpost WebMCP Challenge**.
 
-## What it is
+Instead of moving work into a separate AI chat, WithGeX lets the human and the agent operate on the **same live planning workspace** through WebMCP (`document.modelContext`).
 
-WithGeX is a Human-Agent Collaboration Platform: a human works on a live planning workspace directly, and an AI agent reads and writes that **same live workspace** through [WebMCP](https://github.com/webmachinelearning/webmcp) (`document.modelContext`) — not a copy, not a chat transcript, the same board.
+The human establishes constraints.  
+The agent works within them.  
+The human keeps final authority.
 
-It isn't a chat assistant you copy-paste context into, and it isn't an agent that quietly edits a separate copy of your plan on a server somewhere. The human and the agent share one live board, and the human keeps final authority over what actually changes.
-
-## Why WebMCP
-
-WithGeX does not give an agent a separate copy of the plan.
-
-WebMCP exposes the same live workspace the human is actively editing.
-
-Human actions immediately become agent context,
-and agent actions immediately become visible human workspace changes.
-
-There's no export step, no sync delay, and no second source of truth. The board *is* the interface both the human and the agent act through.
+---
 
 ## Live Demo
 
-**[withgex-test.agex.site](https://withgex-test.agex.site/)**
+- **Live App:** https://withgex-test.agex.site/
+- **Demo Video:** https://youtu.be/L2PN-DdYttQ
+- **GitHub Pages Mirror:** https://redcloudyun-cmyk.github.io/plantogether/
 
-Also mirrored at [redcloudyun-cmyk.github.io/plantogether](https://redcloudyun-cmyk.github.io/plantogether/), deployed automatically from `main` via GitHub Actions (`.github/workflows/deploy.yml`) to GitHub Pages.
+> For WebMCP testing in Chrome, enable:
+>
+> `chrome://flags/#enable-webmcp-testing`
 
-## Human-Agent Collaboration
+---
 
-Four screens, one shared live state:
+## What WithGeX Demonstrates
 
-- **Dashboard** — today's Human vs. Agent activity, plan health, conflicts, and the critical path, computed live from the workspace (nothing hardcoded).
-- **Workspace** — the Kanban board, plus Plan Analysis, Critical Path, and any pending Agent Proposal, with Live Human Context / Context Scope / AI Permissions in the side rail.
-- **Activity** — the full Human + Agent session history, filterable and expandable per event.
-- **Settings** — WebMCP connection status, the registered tools, and the agent's autonomy level.
+WithGeX is designed around one simple idea:
 
-Every card shows who last touched it — **Human** or **Agent** — and agent-authored changes get a brief highlight so they're never a silent surprise.
+> **Human focus becomes agent context — without copy/paste, exports, or a second source of truth.**
 
-## Live Human Context
+The human works directly in the planning board.  
+The agent reads and acts on that same live state through WebMCP.
 
-The **Live Human Context** panel always shows exactly what the human currently has selected — status, due date, owner, lock state — and updates the instant the selection changes.
+### Core workflow
 
-When the agent calls `get_current_focus`, it gets that same card back. It isn't reading a snapshot of "the project" in the abstract; it's picking up the exact thing the human is looking at right now, with no extra explanation required.
+1. A human selects or edits a planning item.
+2. The selected task immediately becomes live agent context.
+3. The agent reads the workspace through WebMCP.
+4. The agent analyzes blockers, dependencies, schedule risk, and critical path.
+5. Safe changes can apply immediately depending on autonomy mode.
+6. Meaningful changes become proposals.
+7. The human accepts or rejects those proposals.
+8. Locked work cannot be changed by the agent.
+9. Actions and decisions remain visible in Activity history.
+
+---
 
 ## WebMCP Tools
 
-Registered live via `document.modelContext.registerTool(...)` — no mocking:
+WithGeX registers five live tools via `document.modelContext.registerTool(...)`.
 
 | Tool | Type | Purpose |
 |---|---|---|
-| `get_workspace_state` | read | Full board state: every item, status, owner, due date, lock, dependencies, current selection |
-| `get_current_focus` | read | The item the human currently has selected |
-| `add_item` | write | Create a new planning item — always low-risk, applies immediately (unless the human has set the agent to Observe mode) |
-| `update_item` | write | Edit an existing item. Blocked outright on locked items. Otherwise routed by risk (see below) |
-| `analyze_plan` | read | Structured breakdown of the plan: status groups, locked/blocked items, schedule conflicts, and the critical path |
+| `get_workspace_state` | Read | Returns the live planning workspace, including items, status, due dates, owners, locks, dependencies, and current selection |
+| `get_current_focus` | Read | Returns the item currently selected by the human |
+| `add_item` | Write | Adds a planning item directly to the live board |
+| `update_item` | Write | Updates an existing item, subject to lock, risk, and autonomy rules |
+| `analyze_plan` | Read | Returns structured plan analysis including blockers, risks, and critical path |
 
-All write results follow a consistent shape (`{ success, reason?, message? }`) with a fixed set of reason codes: `TITLE_REQUIRED`, `ITEM_ID_REQUIRED`, `ITEM_NOT_FOUND`, `INVALID_STATUS`, `INVALID_DATE_FORMAT`, `ITEM_LOCKED_BY_HUMAN`, `DEPENDENCIES_INCOMPLETE`.
+These are real WebMCP tools registered against the live page state — not mocked UI controls.
+
+---
 
 ## Human Authority
 
-### Lock beats everything
+WithGeX is intentionally not “agent has full control.”
 
-> Human establishes constraints. Agent works within them.
+### Autonomy modes
 
-A human can lock any card from the board UI. Locking is a **human-only** action — there's no `lock_item` WebMCP tool, so the agent can never lock or unlock a card itself. A locked item rejects every agent write with `ITEM_LOCKED_BY_HUMAN`, regardless of autonomy level.
-
-### Risk-based Agent Proposals
-
-Not every agent edit applies immediately. Each `update_item` call is classified by risk (`src/lib/risk.ts`):
-
-| Risk | Fields |
-|---|---|
-| Low | title, description, owner |
-| Medium | due date, status |
-| High | dependencies |
-
-...and routed by the current **autonomy level** (Settings screen, default **Assist**):
-
-| Autonomy | Low risk | Medium risk | High risk |
+| Mode | Low-risk changes | Medium-risk changes | High-risk changes |
 |---|---|---|---|
-| Observe | blocked | blocked | blocked |
-| Assist | auto-apply | → Proposal | → Proposal |
-| Autonomous | auto-apply | auto-apply | → Proposal |
+| **Observe** | Blocked | Blocked | Blocked |
+| **Assist** | Auto-apply | Proposal | Proposal |
+| **Autonomous** | Auto-apply | Auto-apply | Proposal |
 
-A change that isn't auto-applied becomes a **Proposal**: it shows up in the Workspace's Agent Proposal panel with a before/after diff and the agent's stated reason, and only takes effect once a human accepts it (in full or per-change, via "Review Individually").
+### Risk classification
 
-### Dependency Blocking
+| Risk | Examples |
+|---|---|
+| **Low** | title, description, owner |
+| **Medium** | due date, status, priority |
+| **High** | dependencies |
 
-An item can't be moved to Done while any of its dependencies are still incomplete — enforced in the store, not just the UI, so it applies equally to a human drag-and-drop and an agent's `update_item` call.
+### Human lock protection
 
-### Revert
+A human can lock a planning item.
 
-Agent changes are immediately visible and independently reversible by the human.
+A locked item rejects agent writes with:
 
-Every time the agent edits a card, WithGeX snapshots what it looked like just before. An "↩ Revert" button appears on that card — visible and clickable only by the human — that restores the pre-edit state in one click. There's no agent-facing "undo" tool; reverting is exclusively a human action.
+`ITEM_LOCKED_BY_HUMAN`
+
+There is no WebMCP tool that lets the agent lock or unlock a card. Human constraints take priority over autonomy mode.
+
+---
+
+## Agent Proposals
+
+In Assist mode, medium- and high-risk edits become proposals instead of silent changes.
+
+The Proposal panel shows:
+
+- current value
+- proposed value
+- risk level
+- agent reason
+- plan impact
+- human accept / reject controls
+
+This makes the approval boundary visible in the same workspace where the work is happening.
+
+> **The agent proposes. The human decides.**
+
+---
+
+## Shared Context
+
+The right-side Agent Context reflects the human's current focus.
+
+When a card is selected, the agent context can include:
+
+- task title
+- status
+- due date
+- owner
+- priority
+- dependencies
+
+When nothing is selected, the UI explicitly shows that no card is selected.
+
+The WebMCP tool `get_current_focus` returns that same live focus.
+
+---
+
+## Activity & Audit Trail
+
+WithGeX records Human + Agent activity in a shared timeline.
+
+Examples include:
+
+- workspace reads
+- current-focus reads
+- plan analysis
+- proposal creation
+- human approval or rejection
+- blocked writes against locked items
+
+Seeded demonstration history is explicitly marked as **DEMO** so it is not confused with actual WebMCP runtime activity.
+
+---
 
 ## Architecture
 
-```
+```text
                          HUMAN
                            │
                  select / edit / drag / lock
@@ -134,55 +188,120 @@ Every time the agent edits a card, WithGeX snapshots what it looked like just be
                                   HUMAN APPROVAL
                                   │            │
                                APPLY        REJECT
-                                  │
-                                  ▼
-                           LIVE WORKSPACE
-                                  │
-                             DIFF / REVERT
-                                  │
-                                  ▼
-                           SESSION HISTORY
 ```
 
-The UI and the WebMCP tools both read and write the same Zustand store (`src/store/workspaceStore.ts`) — there is no separate agent-facing data layer. State persists to `localStorage` so a refresh doesn't lose the board.
+The UI and WebMCP tools use the same Zustand workspace store. There is no separate agent-side copy of the board.
 
-Stack: React 19 + TypeScript + Vite, Zustand (with `persist`), @dnd-kit for drag-and-drop, Tailwind CSS 4.
+---
 
-## Testing with WebMCP
+## Screens
 
-WebMCP is currently available behind a Chrome experimental flag:
+### Dashboard
+- Agent Mission
+- Plan Health
+- Human vs. Agent activity
+- detected issues
+- critical path
+- WebMCP connection status
 
-```
-chrome://flags/#enable-webmcp-testing
-```
+### Workspace
+- Kanban planning board
+- live Agent Context
+- Context Scope controls
+- AI Permissions
+- plan analysis
+- critical path
+- Agent Proposal panel
 
-With the flag on, open the app, then drive it from an MCP-capable agent/client pointed at the page's `document.modelContext`. Without the flag (or in an unsupported browser), the app still works fully as a normal Kanban board — Header/Settings show "WebMCP Unavailable" and the tools simply aren't registered, per the fallback in `src/webmcp/registerTools.ts`.
+### Activity
+- Human + Agent history
+- proposal and rejection events
+- real WebMCP runtime events
+- DEMO seed labeling
 
-To exercise the tools without a real MCP client, inject a mock before the page loads (e.g. via Playwright's `addInitScript`) that implements `document.modelContext.registerTool`, capture the registered tools, and call their `execute(args)` functions directly — this is how the project's own end-to-end verification works.
+### Settings
+- WebMCP connection status
+- registered tools
+- autonomy mode
+- context controls
+
+---
+
+## Demo Flow
+
+The final demo video shows this sequence:
+
+1. Human-Agent shared workspace
+2. Human focus becoming Agent Context
+3. Real WebMCP connection and five registered tools
+4. Plan analysis and critical path
+5. WebMCP-generated proposal
+6. Human rejection of the proposal
+7. Human lock blocking an agent write
+8. Shared Activity audit trail
+9. WithGeX architecture and closing message
+
+**Demo Video:** https://youtu.be/L2PN-DdYttQ
+
+---
+
+## Tech Stack
+
+- React 19
+- TypeScript
+- Vite
+- Zustand with persistence
+- `@dnd-kit`
+- Tailwind CSS 4
+- WebMCP via `document.modelContext`
+
+State persists to `localStorage` so the workspace survives refreshes.
+
+---
 
 ## Local Development
 
 ```bash
 npm install
-npm run dev       # start the dev server
-npm run build     # type-check + production build
-npm run lint      # oxlint
-npm test          # vitest (store + component tests)
+npm run dev
+npm run build
+npm run lint
+npm test
 ```
 
-## Challenge Demo Flow
+---
 
-A ~90–150 second walkthrough:
+## WebMCP Testing
 
-1. **Dashboard** — Plan Health, WebMCP connection status, today's Human vs. Agent activity.
-2. **Human Focus** — select a card in Workspace; Live Human Context updates instantly.
-3. **WebMCP Read** — the agent calls `get_current_focus` and `get_workspace_state`, visible immediately in Activity.
-4. **Conflict** — the human edits a due date that creates a schedule conflict; Plan Health flags it.
-5. **Agent Analysis** — the agent calls `analyze_plan`, then proposes fixes via `update_item`.
-6. **Human Approval** — the human reviews and applies (or rejects) the proposal in the Workspace's Agent Proposal panel.
-7. **Human Authority** — the human locks a card; a further agent edit is rejected with `ITEM_LOCKED_BY_HUMAN`.
-8. **Revert** — the human clicks "↩ Revert" on one of the agent's changes.
-9. **Activity** — the full session history proves the whole loop happened.
+In a compatible Chrome build:
+
+```text
+chrome://flags/#enable-webmcp-testing
+```
+
+Enable WebMCP testing, reload Chrome, then open the WithGeX live app.
+
+With WebMCP available, the app registers all five tools and displays **WebMCP Connected**.
+
+Without WebMCP, WithGeX still works as a normal planning workspace; the UI shows WebMCP as unavailable and does not register the tools.
+
+---
+
+## Challenge Positioning
+
+WithGeX is not a chat assistant layered beside a task board.
+
+It is a **shared operating surface** where:
+
+- the human works directly,
+- the agent receives the same live context,
+- WebMCP exposes the page as structured tools,
+- risky actions remain under human control,
+- and every action remains visible.
+
+**One workspace. Human and agent. Working together.**
+
+---
 
 ## License
 
